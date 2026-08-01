@@ -96,7 +96,6 @@ def add_daily_report_to_word(doc, data):
 # FUNCTION 2: SOOCHNA (NOTICE) FORMAT
 # ==========================================
 def add_soochna_to_word(doc, data, action_type):
-    # Header
     p_head = doc.add_paragraph()
     p_head.alignment = WD_ALIGN_PARAGRAPH.CENTER
     run_title = p_head.add_run("सूचना\n")
@@ -110,7 +109,6 @@ def add_soochna_to_word(doc, data, action_type):
     run_court.font.size = Pt(14)
     doc.add_paragraph("")
 
-    # Accused & Crime Info Table (Invisible Borders)
     table = doc.add_table(rows=1, cols=2)
     table.columns[0].width = Inches(3.0)
     table.columns[1].width = Inches(4.0)
@@ -123,18 +121,14 @@ def add_soochna_to_word(doc, data, action_type):
     thana = str(data.get("thana", "............."))
     table.cell(0, 1).text = f"मु ०अ ०सं०- {crime}\nधारा - {dhara}\n\nथाना- {thana}\nजिला- सुल्तानपुर"
     
-    # Body
     thana_sho = str(data.get("thana", "............."))
     date_app = str(data.get("date", ".................."))
     
     p_body = doc.add_paragraph()
     p_body.add_run(f"\nसेवा में,\n      श्रीमान SHO\n      थाना {thana_sho}, जिला सुल्तानपुर\nमहोदय,\n")
-    
     action_text = "जमानत" if action_type == "जमानत (Bail)" else "NBW RECALL"
-    
     p_body.add_run(f"      निवेदन के साथ अवगत कराना है कि मु ०अ ०सं० व धारा उपरोक्त में अभि० उपरोक्त दिनांक {date_app} को न्यायालय के समक्ष उपस्थित होकर {action_text} करा लिया है।\n{action_text} सूचना आवश्यक कार्यवाही हेतु प्रेषित है।")
     
-    # Footer
     p_foot = doc.add_paragraph("\n\nका ० अभय राज सिंह\nको०मो०")
     p_foot.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     for run in p_foot.runs:
@@ -142,15 +136,72 @@ def add_soochna_to_word(doc, data, action_type):
     doc.add_page_break()
 
 # ==========================================
+# FUNCTION 3: WITNESS/SUMMONS REPORT FORMAT
+# ==========================================
+def add_witness_report_to_word(doc, data):
+    # Set to Landscape for this wide table
+    section = doc.sections[-1]
+    section.orientation = WD_ORIENT.LANDSCAPE
+    new_width, new_height = section.page_height, section.page_width
+    section.page_width = new_width
+    section.page_height = new_height
+    
+    # Headers
+    p_head = doc.add_paragraph()
+    p_head.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    court_name = str(data.get("court_name", "JM (JD) OUTLINE COURT कादीपुर सुल्तानपुर"))
+    run_title = p_head.add_run(f"न्यायालय {court_name}\n")
+    run_title.bold = True
+    run_title.font.size = Pt(16)
+    
+    report_date = str(data.get("report_date", ".................."))
+    run_sub = p_head.add_run(f"साक्षिगणों को निर्गत समन व उनकी उपस्थिति के संबंध में विवरण दिनांक {report_date}")
+    run_sub.font.size = Pt(14)
+    
+    # 8-Column Table
+    table = doc.add_table(rows=2, cols=8)
+    table.style = 'Table Grid'
+    
+    headers = [
+        "जनपद", "साक्ष्य हेतु\nनियत वाद", "निर्गत कुल\nसम्मन", 
+        "तामीला\nहोकर\nप्राप्त\nसम्मन", "निर्गत कुल\nवारंट", 
+        "तामीला\nहोकर प्राप्त\nवारंट", "उपस्थित आए\nसाक्षियों की\nसंख्या", 
+        "परीक्षित\nसाक्षियों की\nसंख्या"
+    ]
+    
+    # Write Headers
+    for i, head_text in enumerate(headers):
+        cell = table.cell(0, i)
+        cell.text = head_text
+        cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        cell.paragraphs[0].runs[0].bold = True
+        
+    # Write Data
+    keys = ["janpad", "niyat_vaad", "nirgat_samman", "tamila_samman", "nirgat_warrant", "tamila_warrant", "upasthit_sakshi", "parikshit_sakshi"]
+    for i, key in enumerate(keys):
+        cell = table.cell(1, i)
+        cell.text = str(data.get(key, "00"))
+        cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+    # Footer
+    doc.add_paragraph("")
+    vc_count = str(data.get("vc_count", "0"))
+    p_foot = doc.add_paragraph(f"VC से होने वाली गवाही सूचना - {vc_count}")
+    p_foot.runs[0].font.size = Pt(14)
+    doc.add_page_break()
+
+# ==========================================
 # MAIN APP UI
 # ==========================================
 doc_type = st.selectbox("📑 Select Document Type to Generate:", 
-                        ["Court Daily Report (डेली रिपोर्ट)", "Soochna (सूचना - Jamanat / NBW Recall)"])
+                        ["Court Daily Report (डेली रिपोर्ट)", 
+                         "Soochna (सूचना - Jamanat / NBW Recall)",
+                         "Witness/Summons Report (साक्षी/समन विवरण)"]) # NEW OPTION
 st.markdown("---")
 
+# ----------------- UI: DAILY REPORT -----------------
 if doc_type == "Court Daily Report (डेली रिपोर्ट)":
     mode = st.radio("How should multiple photos be handled?", ["📂 Combine all photos into ONE report", "📄 Process SEPARATE reports"])
-    st.write("### Upload & Dictate")
     uploaded_files = st.file_uploader("Upload Photos (JPG/PNG)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
     if uploaded_files:
         preview_cols = st.columns(len(uploaded_files) if len(uploaded_files) < 4 else 4)
@@ -182,16 +233,13 @@ if doc_type == "Court Daily Report (डेली रिपोर्ट)":
             section = doc.sections[0]
             section.orientation = WD_ORIENT.PORTRAIT
             section.page_width, section.page_height = Inches(8.5), Inches(11.0)
-            section.top_margin = section.bottom_margin = section.left_margin = section.right_margin = Inches(0.5)
             
             prompt = f"""
             Extract information into JSON with keys: "po_name", "abhiyojak_name", "report_date", "thana", "apr_sankhya", "vaad_sankhya", "dhara", "vaadi", "vivechak", "nirnay_date", "abhiyukt", "ghatna", "adesh".
             CRITICAL GHATNA RULES: If IPC 323, 504 -> "अभियुक्तगण ने वादी के साथ गाली-गलौज की तथा मारपीट कर साधारण उपहति (चोट) कारित की। अपराध धारा [Sections] के अंतर्गत दण्डनीय है।" If 60/63 Excise -> "अभियुक्त के पास से अवैध शराब बरामद हुई। अपराध धारा [Sections] के अंतर्गत दण्डनीय है।"
-            OVERRIDES: PO:{man_po} Abhiyojak:{man_abhiyojak} Date:{man_date} Thana:{man_thana} Crime:{man_apr} Case:{man_vaad} Dhara:{man_dhara} Vaadi:{man_vaadi} Vivechak:{man_vivechak} NirnayDate:{man_nirnay} Accused:{man_abhiyukt} Ghatna:{man_ghatna} Adesh:{man_adesh}. Audio prioritized over image. Output ONLY JSON.
+            OVERRIDES: PO:{man_po} Abhiyojak:{man_abhiyojak} Date:{man_date} Thana:{man_thana} Crime:{man_apr} Case:{man_vaad} Dhara:{man_dhara} Vaadi:{man_vaadi} Vivechak:{man_vivechak} NirnayDate:{man_nirnay} Accused:{man_abhiyukt} Ghatna:{man_ghatna} Adesh:{man_adesh}. Output ONLY JSON.
             """
-            
             audio_part = types.Part.from_bytes(data=audio_file.getvalue(), mime_type=audio_file.type) if audio_file else None
-            
             try:
                 if "Combine" in mode and uploaded_files:
                     contents = [PIL.Image.open(f) for f in uploaded_files]
@@ -214,19 +262,17 @@ if doc_type == "Court Daily Report (डेली रिपोर्ट)":
                 st.download_button("⬇️ Download Daily Report", data=bio.getvalue(), file_name="Court_Daily_Report.docx")
             except Exception as e: st.error(f"Error: {e}")
 
+# ----------------- UI: SOOCHNA -----------------
 elif doc_type == "Soochna (सूचना - Jamanat / NBW Recall)":
     action_choice = st.radio("📌 Select Notice Type:", ["जमानत (Bail)", "NBW RECALL"])
-    
-    st.write("### Upload & Dictate")
-    st.info("🎙️ Tip: Just press record and say: 'Nyayalaya ACJM, Abhiyukt Amit, Thana Kadipur, Crime No 45, Dhara 302, Date 10 August'")
-    audio_file_soochna = st.audio_input("Record Dictation (Highly Recommended)")
+    audio_file_soochna = st.audio_input("🎙️ Record Dictation")
     uploaded_files_soochna = st.file_uploader("Upload FIR/Photos (Optional)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
     
     with st.expander("📝 Manual Text Overrides"):
         s_col1, s_col2 = st.columns(2)
-        s_court = s_col1.text_input("न्यायालय (Court Name - e.g., JM-JD, ACJM):")
-        s_accused = s_col1.text_area("नाम पता अभियुक्त (Accused Name/Address):")
-        s_date = s_col1.text_input("उपस्थिति दिनांक (Appearance Date):")
+        s_court = s_col1.text_input("न्यायालय (Court Name):")
+        s_accused = s_col1.text_area("नाम पता अभियुक्त (Accused):")
+        s_date = s_col1.text_input("उपस्थिति दिनांक (Date):")
         s_crime = s_col2.text_input("मु०अ०सं० (Crime No):")
         s_dhara = s_col2.text_input("धारा (Sections):")
         s_thana = s_col2.text_input("थाना (Thana):")
@@ -235,11 +281,9 @@ elif doc_type == "Soochna (सूचना - Jamanat / NBW Recall)":
         with st.spinner("Processing..."):
             doc = Document()
             prompt = f"""
-            Extract details for a legal 'Soochna' into JSON with EXACTLY these keys: "court_name", "accused", "crime_no", "dhara", "thana", "date".
-            OVERRIDES (Use exactly if provided): Court:{s_court}, Accused:{s_accused}, CrimeNo:{s_crime}, Dhara:{s_dhara}, Thana:{s_thana}, Date:{s_date}.
-            Audio dictation takes extreme priority over images. If missing, use "-". Output ONLY JSON.
+            Extract details for 'Soochna' into JSON with EXACTLY these keys: "court_name", "accused", "crime_no", "dhara", "thana", "date".
+            OVERRIDES (Use exactly if provided): Court:{s_court}, Accused:{s_accused}, CrimeNo:{s_crime}, Dhara:{s_dhara}, Thana:{s_thana}, Date:{s_date}. Output ONLY JSON.
             """
-            
             audio_part = types.Part.from_bytes(data=audio_file_soochna.getvalue(), mime_type=audio_file_soochna.type) if audio_file_soochna else None
             contents = []
             if uploaded_files_soochna: contents.extend([PIL.Image.open(f) for f in uploaded_files_soochna])
@@ -249,9 +293,56 @@ elif doc_type == "Soochna (सूचना - Jamanat / NBW Recall)":
             try:
                 res = client.models.generate_content(model="gemini-3.6-flash", contents=contents).text.strip()
                 add_soochna_to_word(doc, json.loads(res.replace("```json","").replace("```","").strip()), action_choice)
-                
                 bio = io.BytesIO()
                 doc.save(bio)
-                st.success(f"✅ {action_choice} Soochna generated successfully!")
+                st.success(f"✅ {action_choice} Soochna generated!")
                 st.download_button("⬇️ Download Soochna.docx", data=bio.getvalue(), file_name="Soochna_Notice.docx")
+            except Exception as e: st.error(f"Error: {e}")
+
+# ----------------- UI: WITNESS/SUMMONS REPORT (NEW) -----------------
+elif doc_type == "Witness/Summons Report (साक्षी/समन विवरण)":
+    audio_file_wit = st.audio_input("🎙️ Record Dictation (e.g. 'Court is JM JD, Janpad Sultanpur, VC count 0')")
+    uploaded_files_wit = st.file_uploader("Upload Table Photo (Optional)", type=["jpg", "jpeg", "png"])
+    
+    with st.expander("📝 Manual Number Entry (Fill the Table)"):
+        st.markdown("**Header Details**")
+        w_court = st.text_input("न्यायालय (Court Name):", placeholder="e.g., JM (JD) OUTLINE COURT कादीपुर सुल्तानपुर")
+        w_date = st.text_input("दिनांक (Date):", placeholder="e.g., 25/07/2026")
+        
+        st.markdown("**Table Data (Numbers)**")
+        w_col1, w_col2, w_col3, w_col4 = st.columns(4)
+        w_janpad = w_col1.text_input("जनपद (District):", value="सुल्तानपुर")
+        w_1 = w_col2.text_input("साक्ष्य हेतु नियत वाद:", placeholder="00")
+        w_2 = w_col3.text_input("निर्गत कुल सम्मन:", placeholder="00")
+        w_3 = w_col4.text_input("तामीला होकर प्राप्त सम्मन:", placeholder="00")
+        
+        w_col5, w_col6, w_col7, w_col8 = st.columns(4)
+        w_4 = w_col5.text_input("निर्गत कुल वारंट:", placeholder="00")
+        w_5 = w_col6.text_input("तामीला होकर प्राप्त वारंट:", placeholder="00")
+        w_6 = w_col7.text_input("उपस्थित साक्षियों की संख्या:", placeholder="00")
+        w_7 = w_col8.text_input("परीक्षित साक्षियों की संख्या:", placeholder="00")
+        
+        st.markdown("**Footer Details**")
+        w_vc = st.text_input("VC से होने वाली गवाही सूचना (VC Count):", placeholder="0")
+
+    if (uploaded_files_wit or audio_file_wit or w_date or w_1) and st.button("Generate Witness Report", type="primary"):
+        with st.spinner("Processing..."):
+            doc = Document() # add_witness_report_to_word flips this to landscape!
+            prompt = f"""
+            Extract details into JSON with EXACTLY these keys: "court_name", "report_date", "janpad", "niyat_vaad", "nirgat_samman", "tamila_samman", "nirgat_warrant", "tamila_warrant", "upasthit_sakshi", "parikshit_sakshi", "vc_count".
+            OVERRIDES (Use exactly if provided): Court:{w_court}, Date:{w_date}, Janpad:{w_janpad}, NiyatVaad:{w_1}, NirgatSamman:{w_2}, TamilaSamman:{w_3}, NirgatWarrant:{w_4}, TamilaWarrant:{w_5}, Upasthit:{w_6}, Parikshit:{w_7}, VC:{w_vc}. Output ONLY JSON.
+            """
+            audio_part = types.Part.from_bytes(data=audio_file_wit.getvalue(), mime_type=audio_file_wit.type) if audio_file_wit else None
+            contents = []
+            if uploaded_files_wit: contents.append(PIL.Image.open(uploaded_files_wit))
+            if audio_part: contents.append(audio_part)
+            contents.append(prompt)
+            
+            try:
+                res = client.models.generate_content(model="gemini-3.6-flash", contents=contents).text.strip()
+                add_witness_report_to_word(doc, json.loads(res.replace("```json","").replace("```","").strip()))
+                bio = io.BytesIO()
+                doc.save(bio)
+                st.success("✅ Witness Report generated in Landscape Mode!")
+                st.download_button("⬇️ Download Witness Report.docx", data=bio.getvalue(), file_name="Witness_Report.docx")
             except Exception as e: st.error(f"Error: {e}")
