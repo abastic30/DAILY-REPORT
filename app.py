@@ -25,7 +25,6 @@ client = genai.Client(api_key=api_key)
 # FUNCTION 1: COURT DAILY REPORT FORMAT (LANDSCAPE)
 # ==========================================
 def add_daily_report_to_word(doc, data, mohrir_name):
-    # Force Landscape for Daily Report to match image_12.png format
     section = doc.sections[-1]
     section.orientation = WD_ORIENT.LANDSCAPE
     new_width, new_height = section.page_height, section.page_width
@@ -35,11 +34,14 @@ def add_daily_report_to_word(doc, data, mohrir_name):
 
     header_table = doc.add_table(rows=2, cols=3)
     po_val = str(data.get("po_name", ""))
-    po_text = po_val if po_val and po_val != "-" else "............................"
+    po_text = po_val if po_val and po_val != "-" and po_val.lower() != "none" else "............................"
+    
     abhi_val = str(data.get("abhiyojak_name", ""))
-    abhi_text = abhi_val if abhi_val and abhi_val != "-" else "श्री संजीव सिंह"
+    abhi_text = abhi_val if abhi_val and abhi_val != "-" and abhi_val.lower() != "none" else "श्री संजीव सिंह"
+    
+    # --- SAFETY FIX: Prevent "None" in Date ---
     date_val = str(data.get("report_date", ""))
-    date_text = date_val if date_val and date_val != "-" else "............................."
+    date_text = date_val if date_val and date_val != "-" and date_val.lower() != "none" else "............................."
     
     p_left = header_table.cell(0, 0).paragraphs[0]
     p_left.add_run(f"PO- श्री {po_text}\nआरोप बनने का दि० ....................").bold = True
@@ -63,7 +65,6 @@ def add_daily_report_to_word(doc, data, mohrir_name):
     table.style = 'Table Grid'
     table.autofit = False
     
-    # Custom widths optimized for Landscape view
     col_widths = [Inches(1.2), Inches(2.0), Inches(3.2), Inches(3.6)]
     
     labels = ['थाना', 'अ०सं०', 'वाद सं०', 'धारा', 'वादी का नाम व पता', 'विवेचक का नाम', 'निर्णय का दि०', 'अभियुक्त का नाम व पता']
@@ -79,12 +80,25 @@ def add_daily_report_to_word(doc, data, mohrir_name):
     table.cell(6, 1).text = str(data.get("nirnay_date", "-"))
     table.cell(7, 1).text = str(data.get("abhiyukt", "-"))
     
+    # --- SAFETY FIX: Python-side Fallback for Ghatna ---
+    ghatna_val = str(data.get("ghatna", ""))
+    dhara_val = str(data.get("dhara", ""))
+    if not ghatna_val or ghatna_val == "-" or ghatna_val.lower() == "none":
+        if "आर्म्स" in dhara_val or "Arms" in dhara_val or "आर्म्स" in str(data):
+            ghatna_val = f"अभियुक्त के पास से अवैध शस्त्र बरामद हुआ। अपराध धारा {dhara_val} के अंतर्गत दण्डनीय है।"
+        elif "323" in dhara_val:
+            ghatna_val = f"अभियुक्तगण ने वादी के साथ गाली-गलौज की तथा मारपीट कर साधारण उपहति (चोट) कारित की। अपराध धारा {dhara_val} के अंतर्गत दण्डनीय है।"
+        elif "60" in dhara_val or "63" in dhara_val:
+            ghatna_val = f"अभियुक्त के पास से अवैध शराब बरामद हुई। अपराध धारा {dhara_val} के अंतर्गत दण्डनीय है।"
+        else:
+            ghatna_val = f"अभियुक्त के विरुद्ध मामला पंजीकृत किया गया। अपराध धारा {dhara_val} के अंतर्गत दण्डनीय है।"
+
     table.cell(0, 2).text = "घटना का संक्षिप्त विवरण"
     table.cell(0, 2).paragraphs[0].runs[0].bold = True
     c_ghatna = table.cell(1, 2)
     c_ghatna.merge(table.cell(7, 2))
     c_ghatna.text = "" 
-    c_ghatna.paragraphs[0].add_run(str(data.get("ghatna", "-"))).font.color.rgb = RGBColor(0, 0, 255) 
+    c_ghatna.paragraphs[0].add_run(ghatna_val).font.color.rgb = RGBColor(0, 0, 255) 
     
     table.cell(0, 3).text = "न्यायालय के आदेश का विवरण"
     table.cell(0, 3).paragraphs[0].runs[0].bold = True
@@ -242,7 +256,12 @@ if doc_type == "Court Daily Report (डेली रिपोर्ट)":
             doc = Document()
             prompt = f"""
             Extract information into JSON with keys: "po_name", "abhiyojak_name", "report_date", "thana", "apr_sankhya", "vaad_sankhya", "dhara", "vaadi", "vivechak", "nirnay_date", "abhiyukt", "ghatna", "adesh".
-            CRITICAL GHATNA RULES: If IPC 323, 504 -> "अभियुक्तगण ने वादी के साथ गाली-गलौज की तथा मारपीट कर साधारण उपहति (चोट) कारित की। अपराध धारा [Sections] के अंतर्गत दण्डनीय है।" If 60/63 Excise -> "अभियुक्त के पास से अवैध शराब बरामद हुई। अपराध धारा [Sections] के अंतर्गत दण्डनीय है।"
+            
+            CRITICAL GHATNA RULES:
+            1. IF IPC 323, 504 -> "अभियुक्तगण ने वादी के साथ गाली-गलौज की तथा मारपीट कर साधारण उपहति (चोट) कारित की। अपराध धारा [Sections] के अंतर्गत दण्डनीय है।" 
+            2. IF Excise Act (60/63) -> "अभियुक्त के पास से अवैध शराब बरामद हुई। अपराध धारा [Sections] के अंतर्गत दण्डनीय है।"
+            3. IF Arms Act (आर्म्स एक्ट) -> "अभियुक्त के पास से अवैध शस्त्र बरामद हुआ। अपराध धारा [Sections] के अंतर्गत दण्डनीय है।"
+            
             OVERRIDES: PO:{man_po} Abhiyojak:{man_abhiyojak} Date:{man_date} Thana:{man_thana} Crime:{man_apr} Case:{man_vaad} Dhara:{man_dhara} Vaadi:{man_vaadi} Vivechak:{man_vivechak} NirnayDate:{man_nirnay} Accused:{man_abhiyukt} Ghatna:{man_ghatna} Adesh:{man_adesh}. Output ONLY JSON.
             """
             audio_part = types.Part.from_bytes(data=audio_file.getvalue(), mime_type=audio_file.type) if audio_file else None
@@ -264,7 +283,7 @@ if doc_type == "Court Daily Report (डेली रिपोर्ट)":
                     
                 bio = io.BytesIO()
                 doc.save(bio)
-                st.success("✅ Generated in Landscape Mode successfully!")
+                st.success("✅ Generated successfully!")
                 st.download_button("⬇️ Download Daily Report", data=bio.getvalue(), file_name="Court_Daily_Report.docx")
             except Exception as e: st.error(f"Error: {e}")
 
