@@ -1,5 +1,6 @@
 import streamlit as st
 from google import genai
+from google.genai import types  # Added to handle audio files
 import PIL.Image
 import io
 import json
@@ -20,19 +21,16 @@ except KeyError:
 
 client = genai.Client(api_key=api_key)
 
-# Helper function to build the vertical Word format with COLORS & HEADERS
+# Helper function to build the vertical Word format
 def add_case_to_word(doc, data):
     header_table = doc.add_table(rows=2, cols=3)
     
-    # Process PO Name
     po_val = str(data.get("po_name", ""))
     po_text = po_val if po_val and po_val != "-" else "............................"
     
-    # Process Abhiyojak Name (Defaults to Sanjeev Singh if missing)
     abhi_val = str(data.get("abhiyojak_name", ""))
     abhi_text = abhi_val if abhi_val and abhi_val != "-" else "श्री संजीव सिंह"
     
-    # Process Date
     date_val = str(data.get("report_date", ""))
     date_text = date_val if date_val and date_val != "-" else "............................."
     
@@ -121,12 +119,26 @@ mode = st.radio(
      "📄 Process each photo as a SEPARATE case report"]
 )
 
-st.write("### 2. Manual Entry & Voice Dictation (Optional)")
-st.info("🎙️ **Pro Tip:** Tap any box below and use your mobile keyboard's microphone button to speak your entry. Any field you fill here will OVERRIDE the photo.")
+st.write("### 2. Upload Document Photos")
+uploaded_files = st.file_uploader("Upload Photos (JPG/PNG)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
 
-with st.expander("📝 Tap here to manually enter details (Leave blank to use AI extraction)"):
-    # --- HEADER OVERRIDES (Now with 3 Columns) ---
-    st.markdown("**Header Details (Top of Document)**")
+# --- NEW: IMAGE PREVIEW GRID ---
+if uploaded_files:
+    st.markdown("🖼️ **Uploaded Images Preview:**")
+    # Creates a neat row of image thumbnails
+    preview_cols = st.columns(len(uploaded_files) if len(uploaded_files) < 4 else 4)
+    for i, file in enumerate(uploaded_files):
+        with preview_cols[i % 4]:
+            st.image(file, caption=f"Page {i+1}", use_container_width=True)
+
+st.write("### 3. Voice Dictation (Audio)")
+st.info("🎙️ Tap the microphone below to dictate the case details. The AI will listen to you and prioritize your voice!")
+# --- NEW: NATIVE AUDIO MICROPHONE INPUT ---
+audio_file = st.audio_input("Record Dictation (Optional)")
+
+st.write("### 4. Manual Text Overrides (Optional)")
+with st.expander("📝 Tap here to manually type details (Overrides both Photo and Audio)"):
+    st.markdown("**Header Details**")
     head_col1, head_col2, head_col3 = st.columns(3)
     with head_col1:
         man_po = st.text_input("PO- श्री (Judge Name):")
@@ -136,31 +148,28 @@ with st.expander("📝 Tap here to manually enter details (Leave blank to use AI
         man_date = st.text_input("दिनांक (Date):")
         
     st.markdown("---")
-    st.markdown("**Case Details (Table)**")
-    
+    st.markdown("**Case Details**")
     man_thana = st.text_input("थाना (Thana):")
     
     col1, col2 = st.columns(2)
     with col1:
         man_apr = st.text_input("अ०सं० (Crime No):")
         man_dhara = st.text_input("धारा (Sections):")
-        man_vaadi = st.text_area("वादी का नाम व पता (Complainant Name/Address):", height=68)
+        man_vaadi = st.text_area("वादी का नाम व पता (Complainant):", height=68)
         man_nirnay = st.text_input("निर्णय का दि० (Judgment Date):")
         
     with col2:
         man_vaad = st.text_input("वाद सं० (Case No):")
-        man_vivechak = st.text_input("विवेचक का नाम (Vivechak Name):")
-        man_abhiyukt = st.text_area("अभियुक्त का नाम व पता (Accused Name/Address):", height=68)
+        man_vivechak = st.text_input("विवेचक का नाम (Vivechak):")
+        man_abhiyukt = st.text_area("अभियुक्त का नाम व पता (Accused):", height=68)
         
-    man_ghatna = st.text_area("घटना का संक्षिप्त विवरण (Ghatna - Sankshipt Vivaran):", help="Use voice typing here!")
-    man_adesh = st.text_area("न्यायालय के आदेश का विवरण (Aadesh):", help="Use voice typing here!")
+    man_ghatna = st.text_area("घटना का संक्षिप्त विवरण (Ghatna - Sankshipt Vivaran):")
+    man_adesh = st.text_area("न्यायालय के आदेश का विवरण (Aadesh):")
 
-st.write("### 3. Upload & Generate")
-uploaded_files = st.file_uploader("Upload Document Photos", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
-
-if uploaded_files:
-    if st.button("Generate Word Document"):
-        with st.spinner("Processing documents and generating your file..."):
+st.write("### 5. Generate Report")
+if uploaded_files or audio_file:
+    if st.button("Generate Word Document", type="primary"):
+        with st.spinner("Reading documents and listening to audio... Please wait..."):
             
             doc = Document()
             section = doc.sections[0]
@@ -173,38 +182,51 @@ if uploaded_files:
             section.right_margin = Inches(0.5)
             
             prompt = f"""
-            Extract the information from this court document and output it as a JSON object with EXACTLY these 13 keys:
+            Extract the information from the provided court document images AND/OR the provided audio dictation. 
+            Output it as a JSON object with EXACTLY these 13 keys:
             "po_name", "abhiyojak_name", "report_date", "thana", "apr_sankhya", "vaad_sankhya", "dhara", "vaadi", "vivechak", "nirnay_date", "abhiyukt", "ghatna", "adesh".
             
+            AUDIO PRIORITY RULE: If an audio dictation was provided, prioritize the information spoken in the audio. Use the images to fill in any gaps the audio missed.
+            
             CRITICAL INSTRUCTION FOR "ghatna" (घटना का संक्षिप्त विवरण):
-            If the image contains raw police information, DO NOT copy it word-for-word. Instead, read the "dhara" (Sections) and generate the "ghatna" using these EXACT legal templates:
+            If generating from police information, read the "dhara" (Sections) and use these EXACT legal templates:
             1. IF IPC 323, 504: Write EXACTLY: "अभियुक्तगण ने वादी के साथ गाली-गलौज की तथा मारपीट कर साधारण उपहति (चोट) कारित की। अपराध धारा [Insert Sections] के अंतर्गत दण्डनीय है।"
             2. IF Excise Act (60 or 63): Write EXACTLY: "अभियुक्त के पास से अवैध शराब बरामद हुई। अपराध धारा [Insert Sections] के अंतर्गत दण्डनीय है।"
             3. FOR ALL OTHER SECTIONS: Formulate a single, simple sentence describing the act, ending with "अपराध धारा [Insert Sections] के अंतर्गत दण्डनीय है।"
             
-            IMPORTANT OVERRIDES: If any of the following fields have data, YOU MUST USE IT EXACTLY AS PROVIDED instead of extracting it from the image:
-            PO Name (po_name): {man_po if man_po else "Extract Presiding Officer/Judge name from image"}
-            Prosecutor (abhiyojak_name): {man_abhiyojak if man_abhiyojak else "Extract from image. Default to 'श्री संजीव सिंह' if none found."}
-            Report Date (report_date): {man_date if man_date else "Extract Report Date from image"}
-            Thana: {man_thana if man_thana else "Extract from image"}
-            Crime No (apr_sankhya): {man_apr if man_apr else "Extract from image"}
-            Case No (vaad_sankhya): {man_vaad if man_vaad else "Extract from image"}
-            Section (dhara): {man_dhara if man_dhara else "Extract from image"}
-            Complainant (vaadi): {man_vaadi if man_vaadi else "Extract from image"}
-            Investigator (vivechak): {man_vivechak if man_vivechak else "Extract from image"}
-            Judgment Date (nirnay_date): {man_nirnay if man_nirnay else "Extract from image"}
-            Accused (abhiyukt): {man_abhiyukt if man_abhiyukt else "Extract from image"}
+            IMPORTANT TEXT OVERRIDES: If any of the following fields have data, YOU MUST USE IT EXACTLY AS PROVIDED instead of extracting it from the image or audio:
+            PO Name: {man_po if man_po else "Extract"}
+            Prosecutor: {man_abhiyojak if man_abhiyojak else "Extract from image/audio. Default to 'श्री संजीव सिंह' if none found."}
+            Report Date: {man_date if man_date else "Extract"}
+            Thana: {man_thana if man_thana else "Extract"}
+            Crime No: {man_apr if man_apr else "Extract"}
+            Case No: {man_vaad if man_vaad else "Extract"}
+            Section: {man_dhara if man_dhara else "Extract"}
+            Complainant: {man_vaadi if man_vaadi else "Extract"}
+            Investigator: {man_vivechak if man_vivechak else "Extract"}
+            Judgment Date: {man_nirnay if man_nirnay else "Extract"}
+            Accused: {man_abhiyukt if man_abhiyukt else "Extract"}
             Ghatna: {man_ghatna if man_ghatna else "Follow the CRITICAL INSTRUCTION above"}
-            Adesh: {man_adesh if man_adesh else "Extract from image"}
+            Adesh: {man_adesh if man_adesh else "Extract"}
             
             If any info is missing, use "-". Output ONLY valid JSON.
             """
             
+            # --- AUDIO PROCESSING LOGIC ---
+            audio_part = None
+            if audio_file:
+                audio_part = types.Part.from_bytes(data=audio_file.getvalue(), mime_type=audio_file.type)
+            
             success_count = 0
             
-            if "Combine" in mode:
+            # Scenario 1: Combine Images
+            if "Combine" in mode and uploaded_files:
                 images = [PIL.Image.open(f) for f in uploaded_files]
-                contents = images + [prompt] 
+                contents = images
+                if audio_part:
+                    contents.append(audio_part)
+                contents.append(prompt)
+                
                 try:
                     response = client.models.generate_content(model="gemini-3.6-flash", contents=contents)
                     raw_text = response.text.strip()
@@ -218,11 +240,18 @@ if uploaded_files:
                     success_count += 1
                 except Exception as e:
                     st.error(f"Error processing combined photos. Details: {e}")
-            else:
+            
+            # Scenario 2: Separate Images
+            elif "SEPARATE" in mode and uploaded_files:
                 for uploaded_file in uploaded_files:
                     image = PIL.Image.open(uploaded_file)
+                    contents = [image]
+                    if audio_part:
+                        contents.append(audio_part) # Audio applies to each if separate mode is chosen
+                    contents.append(prompt)
+                    
                     try:
-                        response = client.models.generate_content(model="gemini-3.6-flash", contents=[image, prompt])
+                        response = client.models.generate_content(model="gemini-3.6-flash", contents=contents)
                         raw_text = response.text.strip()
                         if "```json" in raw_text:
                             raw_text = raw_text.split("```json")[1].split("```")[0].strip()
@@ -235,10 +264,27 @@ if uploaded_files:
                     except Exception as e:
                         st.error(f"Error processing {uploaded_file.name}. Details: {e}")
             
+            # Scenario 3: Audio ONLY (No Images uploaded)
+            elif audio_file and not uploaded_files:
+                 try:
+                    contents = [audio_part, prompt]
+                    response = client.models.generate_content(model="gemini-3.6-flash", contents=contents)
+                    raw_text = response.text.strip()
+                    if "```json" in raw_text:
+                        raw_text = raw_text.split("```json")[1].split("```")[0].strip()
+                    elif "```" in raw_text:
+                        raw_text = raw_text.split("```")[1].split("```")[0].strip()
+                        
+                    data = json.loads(raw_text)
+                    add_case_to_word(doc, data)
+                    success_count += 1
+                 except Exception as e:
+                    st.error(f"Error processing audio. Details: {e}")
+            
             if success_count > 0:
                 bio = io.BytesIO()
                 doc.save(bio)
-                st.success("✅ Document processed successfully!")
+                st.success(f"✅ Document generated successfully!")
                 st.download_button(
                     label="⬇️ Download Formatted Word Document",
                     data=bio.getvalue(),
