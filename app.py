@@ -1,5 +1,6 @@
 import streamlit as st
 from google import genai
+from google.genai import types
 import PIL.Image
 import io
 import json
@@ -109,22 +110,34 @@ mode = st.radio(
      "📄 Process each photo as a SEPARATE case report"]
 )
 
-st.write("### 2. Manual Entry & Voice Dictation (Optional)")
-st.info("🎙️ **Pro Tip:** Tap a box below and use your mobile keyboard's microphone button to speak your entry!")
-
-with st.expander("📝 Tap here to manually enter details (Overrides the photo)"):
+st.write("### 2. Manual Text Entry (Optional)")
+with st.expander("📝 Tap here to manually type details (Overrides AI extraction)"):
     man_thana = st.text_input("थाना (Thana):")
-    man_crime = st.text_input("अ०सं० / वाद सं० (Crime/Case No):")
-    man_vivechak = st.text_input("विवेचक का नाम (Vivechak):")
-    man_ghatna = st.text_area("घटना का संक्षिप्त विवरण (Ghatna - Sankshipt Vivaran):", help="Use voice typing here!")
-    man_adesh = st.text_area("न्यायालय के आदेश का विवरण (Aadesh):", help="Use voice typing here!")
+    col1, col2 = st.columns(2)
+    with col1:
+        man_apr = st.text_input("अ०सं० (Crime No):")
+        man_dhara = st.text_input("धारा (Sections):")
+        man_vaadi = st.text_area("वादी का नाम व पता (Complainant Name/Address):", height=68)
+        man_nirnay = st.text_input("निर्णय का दि० (Judgment Date):")
+    with col2:
+        man_vaad = st.text_input("वाद सं० (Case No):")
+        man_vivechak = st.text_input("विवेचक का नाम (Vivechak Name):")
+        man_abhiyukt = st.text_area("अभियुक्त का नाम व पता (Accused Name/Address):", height=68)
+    man_ghatna = st.text_area("घटना का संक्षिप्त विवरण (Ghatna):")
+    man_adesh = st.text_area("न्यायालय के आदेश का विवरण (Aadesh):")
 
-st.write("### 3. Upload & Generate")
+st.write("### 3. Audio & Photo Upload")
+st.info("🎙️ You can record your voice directly in the app, upload photos, or do both together!")
+
+# NEW: Built-in Streamlit Audio Recorder
+audio_value = st.audio_input("Record Voice Note (Dictate the case details)")
+
 uploaded_files = st.file_uploader("Upload Document Photos", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
 
-if uploaded_files:
+# Generate if they provided EITHER photos OR an audio recording
+if uploaded_files or audio_value:
     if st.button("Generate Word Document"):
-        with st.spinner("Processing documents and generating your file..."):
+        with st.spinner("Listening, reading, and generating your file..."):
             
             doc = Document()
             section = doc.sections[0]
@@ -136,32 +149,51 @@ if uploaded_files:
             section.left_margin = Inches(0.5)
             section.right_margin = Inches(0.5)
             
+            # Package the audio if they recorded something
+            audio_parts = []
+            if audio_value is not None:
+                audio_parts.append(
+                    types.Part.from_bytes(
+                        data=audio_value.getvalue(),
+                        mime_type=audio_value.type
+                    )
+                )
+            
             prompt = f"""
-            Extract the information from this court document and output it as a JSON object with EXACTLY these 10 keys:
+            Extract the information from the provided audio dictation and/or court document image. Output as a JSON object with EXACTLY these 10 keys:
             "thana", "apr_sankhya", "vaad_sankhya", "dhara", "vaadi", "vivechak", "nirnay_date", "abhiyukt", "ghatna", "adesh".
             
+            PRIORITY RULE: If an audio file is provided, prioritize the spoken details over the image.
+            
             CRITICAL INSTRUCTION FOR "ghatna" (घटना का संक्षिप्त विवरण):
-            If the image contains raw police information (like an FIR), DO NOT copy it word-for-word. Instead, read the "dhara" (Sections) and generate the "ghatna" using these EXACT legal templates:
+            If generating from sections, use these EXACT legal templates:
             1. IF IPC 323, 504: Write EXACTLY: "अभियुक्तगण ने वादी के साथ गाली-गलौज की तथा मारपीट कर साधारण उपहति (चोट) कारित की। अपराध धारा [Insert Sections] के अंतर्गत दण्डनीय है।"
             2. IF Excise Act (60 or 63): Write EXACTLY: "अभियुक्त के पास से अवैध शराब बरामद हुई। अपराध धारा [Insert Sections] के अंतर्गत दण्डनीय है।"
             3. FOR ALL OTHER SECTIONS: Formulate a single, simple sentence describing the act, ending with "अपराध धारा [Insert Sections] के अंतर्गत दण्डनीय है।"
             
-            IMPORTANT OVERRIDES: If any of the following fields have data, YOU MUST USE IT EXACTLY AS PROVIDED instead of extracting it from the image:
-            Thana: {man_thana if man_thana else "Extract from image"}
-            Crime/Case No: {man_crime if man_crime else "Extract from image"}
-            Vivechak: {man_vivechak if man_vivechak else "Extract from image"}
-            Ghatna: {man_ghatna if man_ghatna else "Follow the CRITICAL INSTRUCTION above"}
-            Adesh: {man_adesh if man_adesh else "Extract from image"}
+            IMPORTANT OVERRIDES (Use exactly as provided if not empty):
+            Thana: {man_thana if man_thana else ""}
+            Crime No: {man_apr if man_apr else ""}
+            Case No: {man_vaad if man_vaad else ""}
+            Section: {man_dhara if man_dhara else ""}
+            Complainant: {man_vaadi if man_vaadi else ""}
+            Investigator: {man_vivechak if man_vivechak else ""}
+            Judgment Date: {man_nirnay if man_nirnay else ""}
+            Accused: {man_abhiyukt if man_abhiyukt else ""}
+            Ghatna: {man_ghatna if man_ghatna else ""}
+            Adesh: {man_adesh if man_adesh else ""}
             
             If any info is missing, use "-". Output ONLY valid JSON.
             """
             
             success_count = 0
             
-            if "Combine" in mode:
-                images = [PIL.Image.open(f) for f in uploaded_files]
-                contents = images + [prompt] 
-                try:
+            try:
+                # If they chose to combine everything, OR if they only provided audio and no photos
+                if "Combine" in mode or not uploaded_files:
+                    images = [PIL.Image.open(f) for f in uploaded_files] if uploaded_files else []
+                    contents = audio_parts + images + [prompt] 
+                    
                     response = client.models.generate_content(model="gemini-3.6-flash", contents=contents)
                     raw_text = response.text.strip()
                     if "```json" in raw_text:
@@ -172,13 +204,15 @@ if uploaded_files:
                     data = json.loads(raw_text)
                     add_case_to_word(doc, data)
                     success_count += 1
-                except Exception as e:
-                    st.error(f"Error processing combined photos. Details: {e}")
-            else:
-                for uploaded_file in uploaded_files:
-                    image = PIL.Image.open(uploaded_file)
-                    try:
-                        response = client.models.generate_content(model="gemini-3.6-flash", contents=[image, prompt])
+                
+                # If they want to process multiple separate cases (photos) individually
+                else:
+                    for uploaded_file in uploaded_files:
+                        image = PIL.Image.open(uploaded_file)
+                        # We attach the audio to EACH photo if they selected separate mode
+                        contents = audio_parts + [image, prompt]
+                        
+                        response = client.models.generate_content(model="gemini-3.6-flash", contents=contents)
                         raw_text = response.text.strip()
                         if "```json" in raw_text:
                             raw_text = raw_text.split("```json")[1].split("```")[0].strip()
@@ -188,13 +222,14 @@ if uploaded_files:
                         data = json.loads(raw_text)
                         add_case_to_word(doc, data)
                         success_count += 1
-                    except Exception as e:
-                        st.error(f"Error processing {uploaded_file.name}. Details: {e}")
+                        
+            except Exception as e:
+                st.error(f"Error processing. Technical Details: {e}")
             
             if success_count > 0:
                 bio = io.BytesIO()
                 doc.save(bio)
-                st.success("✅ Document processed successfully!")
+                st.success(f"✅ Generated {success_count} report(s) successfully!")
                 st.download_button(
                     label="⬇️ Download Formatted Word Document",
                     data=bio.getvalue(),
