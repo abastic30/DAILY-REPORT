@@ -24,7 +24,7 @@ client = genai.Client(api_key=api_key)
 # ==========================================
 # FUNCTION 1: COURT DAILY REPORT FORMAT
 # ==========================================
-def add_daily_report_to_word(doc, data):
+def add_daily_report_to_word(doc, data, mohrir_name):
     header_table = doc.add_table(rows=2, cols=3)
     po_val = str(data.get("po_name", ""))
     po_text = po_val if po_val and po_val != "-" else "............................"
@@ -87,7 +87,7 @@ def add_daily_report_to_word(doc, data):
             
     doc.add_paragraph("\n")
     sig_table = doc.add_table(rows=1, cols=2)
-    sig_table.cell(0, 0).paragraphs[0].add_run("का ० अभय राज सिंह\nनाम व हस्ताक्षर कोर्ट मोहर्रिर").bold = True
+    sig_table.cell(0, 0).paragraphs[0].add_run(f"{mohrir_name}\nनाम व हस्ताक्षर कोर्ट मोहर्रिर").bold = True
     sig_table.cell(0, 1).paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
     sig_table.cell(0, 1).paragraphs[0].add_run("हस्ताक्षर अभियोजक").bold = True
     doc.add_page_break()
@@ -95,7 +95,7 @@ def add_daily_report_to_word(doc, data):
 # ==========================================
 # FUNCTION 2: SOOCHNA (NOTICE) FORMAT
 # ==========================================
-def add_soochna_to_word(doc, data, action_type):
+def add_soochna_to_word(doc, data, action_type, mohrir_name):
     p_head = doc.add_paragraph()
     p_head.alignment = WD_ALIGN_PARAGRAPH.CENTER
     run_title = p_head.add_run("सूचना\n")
@@ -129,7 +129,7 @@ def add_soochna_to_word(doc, data, action_type):
     action_text = "जमानत" if action_type == "जमानत (Bail)" else "NBW RECALL"
     p_body.add_run(f"      निवेदन के साथ अवगत कराना है कि मु ०अ ०सं० व धारा उपरोक्त में अभि० उपरोक्त दिनांक {date_app} को न्यायालय के समक्ष उपस्थित होकर {action_text} करा लिया है।\n{action_text} सूचना आवश्यक कार्यवाही हेतु प्रेषित है।")
     
-    p_foot = doc.add_paragraph("\n\nका ० अभय राज सिंह\nको०मो०")
+    p_foot = doc.add_paragraph(f"\n\n{mohrir_name}\nको०मो०")
     p_foot.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     for run in p_foot.runs:
         run.bold = True
@@ -138,7 +138,7 @@ def add_soochna_to_word(doc, data, action_type):
 # ==========================================
 # FUNCTION 3: WITNESS/SUMMONS REPORT FORMAT
 # ==========================================
-def add_witness_report_to_word(doc, data):
+def add_witness_report_to_word(doc, data, mohrir_name):
     # Set to Landscape for this wide table
     section = doc.sections[-1]
     section.orientation = WD_ORIENT.LANDSCAPE
@@ -169,14 +169,12 @@ def add_witness_report_to_word(doc, data):
         "परीक्षित\nसाक्षियों की\nसंख्या"
     ]
     
-    # Write Headers
     for i, head_text in enumerate(headers):
         cell = table.cell(0, i)
         cell.text = head_text
         cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
         cell.paragraphs[0].runs[0].bold = True
         
-    # Write Data
     keys = ["janpad", "niyat_vaad", "nirgat_samman", "tamila_samman", "nirgat_warrant", "tamila_warrant", "upasthit_sakshi", "parikshit_sakshi"]
     for i, key in enumerate(keys):
         cell = table.cell(1, i)
@@ -193,10 +191,17 @@ def add_witness_report_to_word(doc, data):
 # ==========================================
 # MAIN APP UI
 # ==========================================
+
+# --- NEW: GLOBAL SETTINGS ---
+st.markdown("### ⚙️ Global Settings")
+st.info("Update this name and it will apply to the signature lines on all documents.")
+global_mohrir = st.text_input("✍️ Court Mohrir Name (कोर्ट मोहर्रिर):", value="का ० अभय राज सिंह")
+st.markdown("---")
+
 doc_type = st.selectbox("📑 Select Document Type to Generate:", 
                         ["Court Daily Report (डेली रिपोर्ट)", 
                          "Soochna (सूचना - Jamanat / NBW Recall)",
-                         "Witness/Summons Report (साक्षी/समन विवरण)"]) # NEW OPTION
+                         "Witness/Summons Report (साक्षी/समन विवरण)"])
 st.markdown("---")
 
 # ----------------- UI: DAILY REPORT -----------------
@@ -246,15 +251,15 @@ if doc_type == "Court Daily Report (डेली रिपोर्ट)":
                     if audio_part: contents.append(audio_part)
                     contents.append(prompt)
                     res = client.models.generate_content(model="gemini-3.6-flash", contents=contents).text.strip()
-                    add_daily_report_to_word(doc, json.loads(res.replace("```json","").replace("```","").strip()))
+                    add_daily_report_to_word(doc, json.loads(res.replace("```json","").replace("```","").strip()), global_mohrir)
                 elif uploaded_files:
                     for f in uploaded_files:
                         contents = [PIL.Image.open(f), audio_part, prompt] if audio_part else [PIL.Image.open(f), prompt]
                         res = client.models.generate_content(model="gemini-3.6-flash", contents=contents).text.strip()
-                        add_daily_report_to_word(doc, json.loads(res.replace("```json","").replace("```","").strip()))
+                        add_daily_report_to_word(doc, json.loads(res.replace("```json","").replace("```","").strip()), global_mohrir)
                 elif audio_file:
                     res = client.models.generate_content(model="gemini-3.6-flash", contents=[audio_part, prompt]).text.strip()
-                    add_daily_report_to_word(doc, json.loads(res.replace("```json","").replace("```","").strip()))
+                    add_daily_report_to_word(doc, json.loads(res.replace("```json","").replace("```","").strip()), global_mohrir)
                     
                 bio = io.BytesIO()
                 doc.save(bio)
@@ -292,16 +297,16 @@ elif doc_type == "Soochna (सूचना - Jamanat / NBW Recall)":
             
             try:
                 res = client.models.generate_content(model="gemini-3.6-flash", contents=contents).text.strip()
-                add_soochna_to_word(doc, json.loads(res.replace("```json","").replace("```","").strip()), action_choice)
+                add_soochna_to_word(doc, json.loads(res.replace("```json","").replace("```","").strip()), action_choice, global_mohrir)
                 bio = io.BytesIO()
                 doc.save(bio)
                 st.success(f"✅ {action_choice} Soochna generated!")
                 st.download_button("⬇️ Download Soochna.docx", data=bio.getvalue(), file_name="Soochna_Notice.docx")
             except Exception as e: st.error(f"Error: {e}")
 
-# ----------------- UI: WITNESS/SUMMONS REPORT (NEW) -----------------
+# ----------------- UI: WITNESS/SUMMONS REPORT -----------------
 elif doc_type == "Witness/Summons Report (साक्षी/समन विवरण)":
-    audio_file_wit = st.audio_input("🎙️ Record Dictation (e.g. 'Court is JM JD, Janpad Sultanpur, VC count 0')")
+    audio_file_wit = st.audio_input("🎙️ Record Dictation")
     uploaded_files_wit = st.file_uploader("Upload Table Photo (Optional)", type=["jpg", "jpeg", "png"])
     
     with st.expander("📝 Manual Number Entry (Fill the Table)"):
@@ -327,7 +332,7 @@ elif doc_type == "Witness/Summons Report (साक्षी/समन विव
 
     if (uploaded_files_wit or audio_file_wit or w_date or w_1) and st.button("Generate Witness Report", type="primary"):
         with st.spinner("Processing..."):
-            doc = Document() # add_witness_report_to_word flips this to landscape!
+            doc = Document() 
             prompt = f"""
             Extract details into JSON with EXACTLY these keys: "court_name", "report_date", "janpad", "niyat_vaad", "nirgat_samman", "tamila_samman", "nirgat_warrant", "tamila_warrant", "upasthit_sakshi", "parikshit_sakshi", "vc_count".
             OVERRIDES (Use exactly if provided): Court:{w_court}, Date:{w_date}, Janpad:{w_janpad}, NiyatVaad:{w_1}, NirgatSamman:{w_2}, TamilaSamman:{w_3}, NirgatWarrant:{w_4}, TamilaWarrant:{w_5}, Upasthit:{w_6}, Parikshit:{w_7}, VC:{w_vc}. Output ONLY JSON.
@@ -340,7 +345,7 @@ elif doc_type == "Witness/Summons Report (साक्षी/समन विव
             
             try:
                 res = client.models.generate_content(model="gemini-3.6-flash", contents=contents).text.strip()
-                add_witness_report_to_word(doc, json.loads(res.replace("```json","").replace("```","").strip()))
+                add_witness_report_to_word(doc, json.loads(res.replace("```json","").replace("```","").strip()), global_mohrir)
                 bio = io.BytesIO()
                 doc.save(bio)
                 st.success("✅ Witness Report generated in Landscape Mode!")
