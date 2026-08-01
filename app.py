@@ -25,26 +25,17 @@ if uploaded_files:
     if st.button("Generate Word Document"):
         with st.spinner("Processing documents and generating your file..."):
             
-            # Create a new Word Document
             doc = Document()
+            success_count = 0
             
             for uploaded_file in uploaded_files:
                 image = PIL.Image.open(uploaded_file)
                 
-                # 2. ASK THE AI FOR STRICT DATA
+                # 2. STRICTER PROMPT
                 prompt = """
                 Extract the information from this court document image and output it as a JSON object with EXACTLY these keys:
-                "thana" (for थाना)
-                "apr_sankhya" (for अ०सं०)
-                "vaad_sankhya" (for वाद सं०)
-                "dhara" (for धारा)
-                "vaadi" (for वादी का नाम व पता)
-                "vivechak" (for विवेचक का नाम)
-                "nirnay_date" (for निर्णय का दि०)
-                "ghatna" (for घटना का संक्षिप्त विवरण)
-                "adesh" (for न्यायालय के आदेश का विवरण)
-                
-                If any info is missing, use "-". Output ONLY valid JSON and nothing else.
+                "thana", "apr_sankhya", "vaad_sankhya", "dhara", "vaadi", "vivechak", "nirnay_date", "ghatna", "adesh".
+                If any info is missing, use "-". Output ONLY valid JSON and nothing else. No markdown, no introduction.
                 """
                 
                 try:
@@ -54,14 +45,21 @@ if uploaded_files:
                         contents=[image, prompt]
                     )
                     
-                    # Clean and load the data
-                    raw_data = response.text.replace("```json", "").replace("```", "").strip()
-                    data = json.loads(raw_data)
+                    # 3. SMARTER JSON CLEANUP
+                    raw_text = response.text.strip()
                     
-                    # 3. BUILD THE TABLE WITH BORDERS IN WORD
+                    # Strip out markdown code blocks if the AI adds them
+                    if "```json" in raw_text:
+                        raw_text = raw_text.split("```json")[1].split("```")[0].strip()
+                    elif "```" in raw_text:
+                        raw_text = raw_text.split("```")[1].split("```")[0].strip()
+                        
+                    data = json.loads(raw_text)
+                    
+                    # 4. BUILD THE TABLE WITH BORDERS IN WORD
                     doc.add_heading('न्यायालय डेली रिपोर्ट', level=1)
                     table = doc.add_table(rows=2, cols=9)
-                    table.style = 'Table Grid' # This adds the black borders!
+                    table.style = 'Table Grid'
                     
                     # Set the Headers
                     headers = ['थाना', 'अ०सं०', 'वाद सं०', 'धारा', 'वादी का नाम व पता', 'विवेचक का नाम', 'निर्णय का दि०', 'घटना का संक्षिप्त विवरण', 'न्यायालय के आदेश का विवरण']
@@ -71,30 +69,34 @@ if uploaded_files:
                     
                     # Fill the Data
                     row_cells = table.rows[1].cells
-                    row_cells[0].text = data.get("thana", "-")
-                    row_cells[1].text = data.get("apr_sankhya", "-")
-                    row_cells[2].text = data.get("vaad_sankhya", "-")
-                    row_cells[3].text = data.get("dhara", "-")
-                    row_cells[4].text = data.get("vaadi", "-")
-                    row_cells[5].text = data.get("vivechak", "-")
-                    row_cells[6].text = data.get("nirnay_date", "-")
-                    row_cells[7].text = data.get("ghatna", "-")
-                    row_cells[8].text = data.get("adesh", "-")
+                    row_cells[0].text = str(data.get("thana", "-"))
+                    row_cells[1].text = str(data.get("apr_sankhya", "-"))
+                    row_cells[2].text = str(data.get("vaad_sankhya", "-"))
+                    row_cells[3].text = str(data.get("dhara", "-"))
+                    row_cells[4].text = str(data.get("vaadi", "-"))
+                    row_cells[5].text = str(data.get("vivechak", "-"))
+                    row_cells[6].text = str(data.get("nirnay_date", "-"))
+                    row_cells[7].text = str(data.get("ghatna", "-"))
+                    row_cells[8].text = str(data.get("adesh", "-"))
                     
-                    # Add a page break so the next photo goes on a new page
                     doc.add_page_break() 
+                    success_count += 1
                     
                 except Exception as e:
-                    st.error(f"Error processing {uploaded_file.name}: Check if the photo is clear.")
+                    # THIS WILL NOW SHOW EXACTLY WHY IT FAILED
+                    st.error(f"Error processing {uploaded_file.name}. Technical Details: {e}")
+                    if 'response' in locals() and hasattr(response, 'text'):
+                        st.warning(f"What the AI tried to send back: {response.text}")
             
-            # 4. CREATE THE DOWNLOAD BUTTON
-            bio = io.BytesIO()
-            doc.save(bio)
-            
-            st.success("✅ All documents processed successfully!")
-            st.download_button(
-                label="⬇️ Download Formatted Word Document",
-                data=bio.getvalue(),
-                file_name="Court_Daily_Report.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
+            # 5. CREATE DOWNLOAD BUTTON ONLY IF AT LEAST ONE SUCCEEDED
+            if success_count > 0:
+                bio = io.BytesIO()
+                doc.save(bio)
+                
+                st.success(f"✅ Successfully processed {success_count} document(s)!")
+                st.download_button(
+                    label="⬇️ Download Formatted Word Document",
+                    data=bio.getvalue(),
+                    file_name="Court_Daily_Report.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
