@@ -5,7 +5,7 @@ import io
 import json
 from docx import Document
 from docx.shared import Inches
-from docx.enum.section import WD_SECTION
+from docx.enum.section import WD_ORIENT
 
 # Set up the web app
 st.set_page_config(page_title="Court Daily Report Generator", page_icon="⚖️", layout="wide")
@@ -70,7 +70,7 @@ if uploaded_files:
             
             doc = Document()
             section = doc.sections[0]
-            section.orientation = WD_SECTION.LANDSCAPE
+            section.orientation = WD_ORIENT.LANDSCAPE
             new_width, new_height = section.page_height, section.page_width
             section.page_width = new_width
             section.page_height = new_height
@@ -92,7 +92,6 @@ if uploaded_files:
             # --- LOGIC FOR COMBINING PHOTOS ---
             if "Combine" in mode:
                 images = [PIL.Image.open(f) for f in uploaded_files]
-                # Send all images in a single request to the AI
                 contents = images + [prompt] 
                 
                 try:
