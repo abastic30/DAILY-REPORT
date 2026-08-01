@@ -22,9 +22,17 @@ except KeyError:
 client = genai.Client(api_key=api_key)
 
 # ==========================================
-# FUNCTION 1: COURT DAILY REPORT FORMAT
+# FUNCTION 1: COURT DAILY REPORT FORMAT (LANDSCAPE)
 # ==========================================
 def add_daily_report_to_word(doc, data, mohrir_name):
+    # Force Landscape for Daily Report to match image_12.png format
+    section = doc.sections[-1]
+    section.orientation = WD_ORIENT.LANDSCAPE
+    new_width, new_height = section.page_height, section.page_width
+    section.page_width = new_width
+    section.page_height = new_height
+    section.top_margin = section.bottom_margin = section.left_margin = section.right_margin = Inches(0.5)
+
     header_table = doc.add_table(rows=2, cols=3)
     po_val = str(data.get("po_name", ""))
     po_text = po_val if po_val and po_val != "-" else "............................"
@@ -53,7 +61,11 @@ def add_daily_report_to_word(doc, data, mohrir_name):
     
     table = doc.add_table(rows=8, cols=4)
     table.style = 'Table Grid'
-    col_widths = [Inches(1.0), Inches(1.5), Inches(2.2), Inches(2.8)]
+    table.autofit = False
+    
+    # Custom widths optimized for Landscape view
+    col_widths = [Inches(1.2), Inches(2.0), Inches(3.2), Inches(3.6)]
+    
     labels = ['थाना', 'अ०सं०', 'वाद सं०', 'धारा', 'वादी का नाम व पता', 'विवेचक का नाम', 'निर्णय का दि०', 'अभियुक्त का नाम व पता']
     for i, label in enumerate(labels):
         table.cell(i, 0).text = label
@@ -139,14 +151,12 @@ def add_soochna_to_word(doc, data, action_type, mohrir_name):
 # FUNCTION 3: WITNESS/SUMMONS REPORT FORMAT
 # ==========================================
 def add_witness_report_to_word(doc, data, mohrir_name):
-    # Set to Landscape for this wide table
     section = doc.sections[-1]
     section.orientation = WD_ORIENT.LANDSCAPE
     new_width, new_height = section.page_height, section.page_width
     section.page_width = new_width
     section.page_height = new_height
     
-    # Headers
     p_head = doc.add_paragraph()
     p_head.alignment = WD_ALIGN_PARAGRAPH.CENTER
     court_name = str(data.get("court_name", "JM (JD) OUTLINE COURT कादीपुर सुल्तानपुर"))
@@ -158,7 +168,6 @@ def add_witness_report_to_word(doc, data, mohrir_name):
     run_sub = p_head.add_run(f"साक्षिगणों को निर्गत समन व उनकी उपस्थिति के संबंध में विवरण दिनांक {report_date}")
     run_sub.font.size = Pt(14)
     
-    # 8-Column Table
     table = doc.add_table(rows=2, cols=8)
     table.style = 'Table Grid'
     
@@ -181,7 +190,6 @@ def add_witness_report_to_word(doc, data, mohrir_name):
         cell.text = str(data.get(key, "00"))
         cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
         
-    # Footer
     doc.add_paragraph("")
     vc_count = str(data.get("vc_count", "0"))
     p_foot = doc.add_paragraph(f"VC से होने वाली गवाही सूचना - {vc_count}")
@@ -191,10 +199,7 @@ def add_witness_report_to_word(doc, data, mohrir_name):
 # ==========================================
 # MAIN APP UI
 # ==========================================
-
-# --- NEW: GLOBAL SETTINGS ---
 st.markdown("### ⚙️ Global Settings")
-st.info("Update this name and it will apply to the signature lines on all documents.")
 global_mohrir = st.text_input("✍️ Court Mohrir Name (कोर्ट मोहर्रिर):", value="का ० अभय राज सिंह")
 st.markdown("---")
 
@@ -235,10 +240,6 @@ if doc_type == "Court Daily Report (डेली रिपोर्ट)":
     if (uploaded_files or audio_file) and st.button("Generate Daily Report", type="primary"):
         with st.spinner("Processing..."):
             doc = Document()
-            section = doc.sections[0]
-            section.orientation = WD_ORIENT.PORTRAIT
-            section.page_width, section.page_height = Inches(8.5), Inches(11.0)
-            
             prompt = f"""
             Extract information into JSON with keys: "po_name", "abhiyojak_name", "report_date", "thana", "apr_sankhya", "vaad_sankhya", "dhara", "vaadi", "vivechak", "nirnay_date", "abhiyukt", "ghatna", "adesh".
             CRITICAL GHATNA RULES: If IPC 323, 504 -> "अभियुक्तगण ने वादी के साथ गाली-गलौज की तथा मारपीट कर साधारण उपहति (चोट) कारित की। अपराध धारा [Sections] के अंतर्गत दण्डनीय है।" If 60/63 Excise -> "अभियुक्त के पास से अवैध शराब बरामद हुई। अपराध धारा [Sections] के अंतर्गत दण्डनीय है।"
@@ -263,7 +264,7 @@ if doc_type == "Court Daily Report (डेली रिपोर्ट)":
                     
                 bio = io.BytesIO()
                 doc.save(bio)
-                st.success("✅ Generated successfully!")
+                st.success("✅ Generated in Landscape Mode successfully!")
                 st.download_button("⬇️ Download Daily Report", data=bio.getvalue(), file_name="Court_Daily_Report.docx")
             except Exception as e: st.error(f"Error: {e}")
 
