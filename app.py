@@ -192,7 +192,7 @@ def add_witness_report_to_word(doc, data, mohrir_name):
     doc.add_page_break()
 
 # ==========================================
-# FUNCTION 4: TOP 10 REPORT FORMAT (NEW)
+# FUNCTION 4: TOP 10 REPORT FORMAT
 # ==========================================
 def add_top_10_report_to_word(doc, rows_data):
     section = doc.sections[-1]
@@ -238,7 +238,7 @@ def add_top_10_report_to_word(doc, rows_data):
     doc.add_page_break()
 
 # ==========================================
-# FUNCTION 5: ADVOCATE CASES REPORT FORMAT (NEW)
+# FUNCTION 5: ADVOCATE CASES REPORT FORMAT
 # ==========================================
 def add_advocate_cases_report_to_word(doc, rows_data):
     section = doc.sections[-1]
@@ -295,8 +295,8 @@ doc_type = st.selectbox("📑 Select Document Type to Generate:", [
     "Court Daily Report (डेली रिपोर्ट)", 
     "Soochna (सूचना - Jamanat / NBW Recall)",
     "Witness/Summons Report (साक्षी/समन विवरण)",
-    "Top 10 Report (टॉप 10 की सूचना)",                      # NEW
-    "Cases Against Advocates Report (अधिवक्ता के विरुद्ध अभियोग)" # NEW
+    "Top 10 Report (टॉप 10 की सूचना)",                      
+    "Cases Against Advocates Report (अधिवक्ता के विरुद्ध अभियोग)" 
 ])
 st.markdown("---")
 
@@ -421,12 +421,12 @@ elif doc_type == "Witness/Summons Report (साक्षी/समन विव
         st.success("✅ Generated!")
         st.download_button("⬇️ Download Witness Report.docx", data=bio.getvalue(), file_name="Witness_Report.docx")
 
-# ----------------- UI: TOP 10 REPORT (NEW) -----------------
+# ----------------- UI: TOP 10 REPORT (WITH VOICE & MANUAL EDIT) -----------------
 elif doc_type == "Top 10 Report (टॉप 10 की सूचना)":
-    st.info("📋 This generates the Top 10 Report table with default sample data. You can edit any field below or dictate updates.")
-    audio_top10 = st.audio_input("🎙️ Record Dictation to update dates/statuses")
+    st.info("📋 Edit the JSON table rows below or use the microphone to dictate updates (e.g., 'Change date for case 3229/24 to 20-08-26 and status to बहस में').")
     
-    # Default sample rows based on image_13.png
+    audio_top10 = st.audio_input("🎙️ Record Dictation for Top 10 Report")
+    
     default_top10 = [
         ["पंकज सिंह S/O राजेंद्र प्रताप सिंह", "464/16", "385 IPC", "कादीपुर Str", "3229/24", "4", "01", "03", "साक्ष्य में", "11-08-26"],
         ["-", "435/22", "3/25 A.act", "कादीपुर Str", "868/24", "6", "0", "6", "हाजिरी में", "11-08-26"],
@@ -434,15 +434,14 @@ elif doc_type == "Top 10 Report (टॉप 10 की सूचना)":
         ["-", "91/15", "386, 435, 427 IPC", "कादीपुर Str", "5451/24", "7", "0", "7", "साक्ष्य में", "11-08-26"]
     ]
     
-    with st.expander("✏️ Edit Top 10 Table Rows"):
-        edited_text = st.text_area("Edit row data (JSON format):", value=json.dumps(default_top10, ensure_ascii=False, indent=2), height=200)
+    with st.expander("✏️ Manual Data Entry & Dictation (Edit Table Rows)", expanded=True):
+        edited_text = st.text_area("Edit table rows (JSON format):", value=json.dumps(default_top10, ensure_ascii=False, indent=2), height=250)
         
     if st.button("Generate Top 10 Report", type="primary"):
         with st.spinner("Generating document..."):
             doc = Document()
             rows = json.loads(edited_text)
             
-            # Optional audio processing override if spoken
             if audio_top10:
                 prompt = f"Given these current Top 10 table rows: {json.dumps(rows)}, update any dates, witness counts, or statuses based on this audio dictation. Return ONLY updated JSON list of lists."
                 audio_part = types.Part.from_bytes(data=audio_top10.getvalue(), mime_type=audio_top10.type)
@@ -457,12 +456,12 @@ elif doc_type == "Top 10 Report (टॉप 10 की सूचना)":
             st.success("✅ Top 10 Report generated successfully in Landscape Mode!")
             st.download_button("⬇️ Download Top 10 Report.docx", data=bio.getvalue(), file_name="Top_10_Report.docx")
 
-# ----------------- UI: ADVOCATE CASES REPORT (NEW) -----------------
+# ----------------- UI: ADVOCATE CASES REPORT (WITH VOICE & MANUAL EDIT) -----------------
 elif doc_type == "Cases Against Advocates Report (अधिवक्ता के विरुद्ध अभियोग)":
-    st.info("⚖️ This generates the Cases Against Advocates table with default sample data. You can edit dates or statuses below.")
-    audio_adv = st.audio_input("🎙️ Record Dictation to update dates/statuses")
+    st.info("⚖️ Edit the JSON table rows below or use the microphone to dictate status updates (e.g., 'Change next date for case 0415/16 to 25-08-26 and action to समन तामीला').")
     
-    # Default sample rows based on image_14.png
+    audio_adv = st.audio_input("🎙️ Record Dictation for Advocate Cases Report")
+    
     default_adv = [
         ["35", "0415/16", "323/504/506 भादवि", "सुल्तानपुर", "कादीपुर", "झीगर पुत्र अनिकेत", "ACJM, कादीपुर", "हाजिरी", "18-08-26", "समन जारी है"],
         ["37", "474/2021", "323/504/506/427 भादवि", "सुल्तानपुर", "कादीपुर", "हरिराम पुत्र छंगूराम", "ACJM, कादीपुर", "हाजिरी", "21-09-26", "समन जारी है"],
@@ -472,8 +471,8 @@ elif doc_type == "Cases Against Advocates Report (अधिवक्ता क�
         ["-", "140/17", "323,506IPC", "सुल्तानपुर", "कादीपुर", "जिगर डूबे व अन्य", "ACJM KADIPUR", "हाजिरी", "16-08-26", "अभियुक्त को NBW"]
     ]
     
-    with st.expander("✏️ Edit Advocate Cases Table Rows"):
-        edited_adv_text = st.text_area("Edit row data (JSON format):", value=json.dumps(default_adv, ensure_ascii=False, indent=2), height=220)
+    with st.expander("✏️ Manual Data Entry & Dictation (Edit Table Rows)", expanded=True):
+        edited_adv_text = st.text_area("Edit table rows (JSON format):", value=json.dumps(default_adv, ensure_ascii=False, indent=2), height=280)
         
     if st.button("Generate Advocate Cases Report", type="primary"):
         with st.spinner("Generating document..."):
