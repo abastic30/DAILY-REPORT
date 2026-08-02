@@ -22,24 +22,19 @@ except KeyError:
 client = genai.Client(api_key=api_key)
 
 # ==========================================
-# FUNCTION 1: COURT DAILY REPORT FORMAT (LANDSCAPE)
+# FUNCTION 1: COURT DAILY REPORT FORMAT
 # ==========================================
 def add_daily_report_to_word(doc, data, mohrir_name):
     section = doc.sections[-1]
     section.orientation = WD_ORIENT.LANDSCAPE
-    new_width, new_height = section.page_height, section.page_width
-    section.page_width = new_width
-    section.page_height = new_height
+    section.page_width, section.page_height = section.page_height, section.page_width
     section.top_margin = section.bottom_margin = section.left_margin = section.right_margin = Inches(0.5)
 
     header_table = doc.add_table(rows=2, cols=3)
     po_val = str(data.get("po_name", ""))
     po_text = po_val if po_val and po_val != "-" and po_val.lower() != "none" else "............................"
-    
     abhi_val = str(data.get("abhiyojak_name", ""))
     abhi_text = abhi_val if abhi_val and abhi_val != "-" and abhi_val.lower() != "none" else "श्री संजीव सिंह"
-    
-    # --- SAFETY FIX: Prevent "None" in Date ---
     date_val = str(data.get("report_date", ""))
     date_text = date_val if date_val and date_val != "-" and date_val.lower() != "none" else "............................."
     
@@ -47,26 +42,21 @@ def add_daily_report_to_word(doc, data, mohrir_name):
     p_left.add_run(f"PO- श्री {po_text}\nआरोप बनने का दि० ....................").bold = True
     p_center = header_table.cell(0, 1).paragraphs[0]
     p_center.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run_center = p_center.add_run("न्यायालय डेली रिपोर्ट")
-    run_center.bold = True
-    run_center.font.size = Pt(16)
+    p_center.add_run("न्यायालय डेली रिपोर्ट").bold = True
+    p_center.runs[0].font.size = Pt(16)
     p_right = header_table.cell(0, 2).paragraphs[0]
     p_right.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     p_right.add_run(f"अभियोजक का नाम- {abhi_text}.\nदिनांक - {date_text}").bold = True
     
     court_cell = header_table.cell(1, 0)
     court_cell.merge(header_table.cell(1, 2))
-    run_court = court_cell.paragraphs[0].add_run("न्यायालय - ACJM - Kadipur सुल्तानपुर")
-    run_court.bold = True
-    run_court.font.size = Pt(14)
+    court_cell.paragraphs[0].add_run("न्यायालय - ACJM - Kadipur सुल्तानपुर").bold = True
+    court_cell.paragraphs[0].runs[0].font.size = Pt(14)
     doc.add_paragraph("")
     
     table = doc.add_table(rows=8, cols=4)
     table.style = 'Table Grid'
-    table.autofit = False
-    
     col_widths = [Inches(1.2), Inches(2.0), Inches(3.2), Inches(3.6)]
-    
     labels = ['थाना', 'अ०सं०', 'वाद सं०', 'धारा', 'वादी का नाम व पता', 'विवेचक का नाम', 'निर्णय का दि०', 'अभियुक्त का नाम व पता']
     for i, label in enumerate(labels):
         table.cell(i, 0).text = label
@@ -80,16 +70,13 @@ def add_daily_report_to_word(doc, data, mohrir_name):
     table.cell(6, 1).text = str(data.get("nirnay_date", "-"))
     table.cell(7, 1).text = str(data.get("abhiyukt", "-"))
     
-    # --- SAFETY FIX: Python-side Fallback for Ghatna ---
     ghatna_val = str(data.get("ghatna", ""))
     dhara_val = str(data.get("dhara", ""))
     if not ghatna_val or ghatna_val == "-" or ghatna_val.lower() == "none":
-        if "आर्म्स" in dhara_val or "Arms" in dhara_val or "आर्म्स" in str(data):
+        if "आर्म्स" in dhara_val or "Arms" in dhara_val:
             ghatna_val = f"अभियुक्त के पास से अवैध शस्त्र बरामद हुआ। अपराध धारा {dhara_val} के अंतर्गत दण्डनीय है।"
         elif "323" in dhara_val:
             ghatna_val = f"अभियुक्तगण ने वादी के साथ गाली-गलौज की तथा मारपीट कर साधारण उपहति (चोट) कारित की। अपराध धारा {dhara_val} के अंतर्गत दण्डनीय है।"
-        elif "60" in dhara_val or "63" in dhara_val:
-            ghatna_val = f"अभियुक्त के पास से अवैध शराब बरामद हुई। अपराध धारा {dhara_val} के अंतर्गत दण्डनीय है।"
         else:
             ghatna_val = f"अभियुक्त के विरुद्ध मामला पंजीकृत किया गया। अपराध धारा {dhara_val} के अंतर्गत दण्डनीय है।"
 
@@ -167,31 +154,25 @@ def add_soochna_to_word(doc, data, action_type, mohrir_name):
 def add_witness_report_to_word(doc, data, mohrir_name):
     section = doc.sections[-1]
     section.orientation = WD_ORIENT.LANDSCAPE
-    new_width, new_height = section.page_height, section.page_width
-    section.page_width = new_width
-    section.page_height = new_height
+    section.page_width, section.page_height = section.page_height, section.page_width
     
     p_head = doc.add_paragraph()
     p_head.alignment = WD_ALIGN_PARAGRAPH.CENTER
     court_name = str(data.get("court_name", "JM (JD) OUTLINE COURT कादीपुर सुल्तानपुर"))
-    run_title = p_head.add_run(f"न्यायालय {court_name}\n")
-    run_title.bold = True
-    run_title.font.size = Pt(16)
+    p_head.add_run(f"न्यायालय {court_name}\n").bold = True
+    p_head.runs[0].font.size = Pt(16)
     
     report_date = str(data.get("report_date", ".................."))
-    run_sub = p_head.add_run(f"साक्षिगणों को निर्गत समन व उनकी उपस्थिति के संबंध में विवरण दिनांक {report_date}")
-    run_sub.font.size = Pt(14)
+    p_head.add_run(f"साक्षिगणों को निर्गत समन व उनकी उपस्थिति के संबंध में विवरण दिनांक {report_date}").font.size = Pt(14)
     
     table = doc.add_table(rows=2, cols=8)
     table.style = 'Table Grid'
-    
     headers = [
         "जनपद", "साक्ष्य हेतु\nनियत वाद", "निर्गत कुल\nसम्मन", 
         "तामीला\nहोकर\nप्राप्त\nसम्मन", "निर्गत कुल\nवारंट", 
         "तामीला\nहोकर प्राप्त\nवारंट", "उपस्थित आए\nसाक्षियों की\nसंख्या", 
         "परीक्षित\nसाक्षियों की\nसंख्या"
     ]
-    
     for i, head_text in enumerate(headers):
         cell = table.cell(0, i)
         cell.text = head_text
@@ -211,16 +192,112 @@ def add_witness_report_to_word(doc, data, mohrir_name):
     doc.add_page_break()
 
 # ==========================================
+# FUNCTION 4: TOP 10 REPORT FORMAT (NEW)
+# ==========================================
+def add_top_10_report_to_word(doc, rows_data):
+    section = doc.sections[-1]
+    section.orientation = WD_ORIENT.LANDSCAPE
+    section.page_width, section.page_height = section.page_height, section.page_width
+    section.top_margin = section.bottom_margin = section.left_margin = section.right_margin = Inches(0.5)
+
+    p_head = doc.add_paragraph()
+    p_head.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_head.add_run("न्यायालय ACJM Kadipur सुल्तानपुर\n").bold = True
+    p_head.runs[0].font.size = Pt(16)
+    p_head.add_run("टॉप 10 की सूचना").bold = True
+    p_head.runs[1].font.size = Pt(14)
+    doc.add_paragraph("")
+
+    table = doc.add_table(rows=len(rows_data) + 1, cols=10)
+    table.style = 'Table Grid'
+    table.autofit = False
+
+    headers = [
+        "अभियुक्त का नाम", "मु०अ०सं०", "धारा", "थाना", "वाद संख्या", 
+        "कुल गवाहों\nकी संख्या", "परीक्षित\nगवाहों", "परीक्षित हेतु\nशेष गवाहों की संख्या", 
+        "वर्तमान स्थिति", "अग्रिम तिथि"
+    ]
+    col_widths = [Inches(1.5), Inches(0.9), Inches(1.1), Inches(0.8), Inches(0.9), Inches(0.8), Inches(0.8), Inches(1.0), Inches(1.0), Inches(0.8)]
+
+    for i, h in enumerate(headers):
+        cell = table.cell(0, i)
+        cell.text = h
+        cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        cell.paragraphs[0].runs[0].bold = True
+
+    for r_idx, row_vals in enumerate(rows_data):
+        for c_idx, val in enumerate(row_vals):
+            cell = table.cell(r_idx + 1, c_idx)
+            cell.text = str(val)
+            cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    for row in table.rows:
+        for idx, width in enumerate(col_widths):
+            row.cells[idx].width = width
+
+    doc.add_page_break()
+
+# ==========================================
+# FUNCTION 5: ADVOCATE CASES REPORT FORMAT (NEW)
+# ==========================================
+def add_advocate_cases_report_to_word(doc, rows_data):
+    section = doc.sections[-1]
+    section.orientation = WD_ORIENT.LANDSCAPE
+    section.page_width, section.page_height = section.page_height, section.page_width
+    section.top_margin = section.bottom_margin = section.left_margin = section.right_margin = Inches(0.5)
+
+    p_head = doc.add_paragraph()
+    p_head.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_head.add_run("न्यायालय अपर मुख्य न्यायिक मजिस्ट्रेट, कादीपुर जिला- सुल्तानपुर\n").bold = True
+    p_head.runs[0].font.size = Pt(15)
+    p_head.add_run('"अधिवक्ता के विरुद्ध दर्ज अभियोगों के सम्बन्ध में सूचना"').bold = True
+    p_head.runs[1].font.size = Pt(13)
+    doc.add_paragraph("")
+
+    table = doc.add_table(rows=len(rows_data) + 1, cols=10)
+    table.style = 'Table Grid'
+    table.autofit = False
+
+    headers = [
+        "क्र० सं०", "मु०अ०सं०", "धारा", "जिला", "थाना", 
+        "अभियुक्त व पिता\nका नाम", "न्यायालय\nका नाम", "न्यायालय में\nवाद की स्थिति", 
+        "नियत तिथि", "नियत तिथि पर\nहुई अग्रिम कार्यवाही"
+    ]
+    col_widths = [Inches(0.6), Inches(0.9), Inches(1.1), Inches(0.8), Inches(0.8), Inches(1.5), Inches(1.2), Inches(0.9), Inches(0.9), Inches(1.3)]
+
+    for i, h in enumerate(headers):
+        cell = table.cell(0, i)
+        cell.text = h
+        cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        cell.paragraphs[0].runs[0].bold = True
+
+    for r_idx, row_vals in enumerate(rows_data):
+        for c_idx, val in enumerate(row_vals):
+            cell = table.cell(r_idx + 1, c_idx)
+            cell.text = str(val)
+            cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    for row in table.rows:
+        for idx, width in enumerate(col_widths):
+            row.cells[idx].width = width
+
+    doc.add_page_break()
+
+
+# ==========================================
 # MAIN APP UI
 # ==========================================
 st.markdown("### ⚙️ Global Settings")
 global_mohrir = st.text_input("✍️ Court Mohrir Name (कोर्ट मोहर्रिर):", value="का ० अभय राज सिंह")
 st.markdown("---")
 
-doc_type = st.selectbox("📑 Select Document Type to Generate:", 
-                        ["Court Daily Report (डेली रिपोर्ट)", 
-                         "Soochna (सूचना - Jamanat / NBW Recall)",
-                         "Witness/Summons Report (साक्षी/समन विवरण)"])
+doc_type = st.selectbox("📑 Select Document Type to Generate:", [
+    "Court Daily Report (डेली रिपोर्ट)", 
+    "Soochna (सूचना - Jamanat / NBW Recall)",
+    "Witness/Summons Report (साक्षी/समन विवरण)",
+    "Top 10 Report (टॉप 10 की सूचना)",                      # NEW
+    "Cases Against Advocates Report (अधिवक्ता के विरुद्ध अभियोग)" # NEW
+])
 st.markdown("---")
 
 # ----------------- UI: DAILY REPORT -----------------
@@ -256,12 +333,6 @@ if doc_type == "Court Daily Report (डेली रिपोर्ट)":
             doc = Document()
             prompt = f"""
             Extract information into JSON with keys: "po_name", "abhiyojak_name", "report_date", "thana", "apr_sankhya", "vaad_sankhya", "dhara", "vaadi", "vivechak", "nirnay_date", "abhiyukt", "ghatna", "adesh".
-            
-            CRITICAL GHATNA RULES:
-            1. IF IPC 323, 504 -> "अभियुक्तगण ने वादी के साथ गाली-गलौज की तथा मारपीट कर साधारण उपहति (चोट) कारित की। अपराध धारा [Sections] के अंतर्गत दण्डनीय है।" 
-            2. IF Excise Act (60/63) -> "अभियुक्त के पास से अवैध शराब बरामद हुई। अपराध धारा [Sections] के अंतर्गत दण्डनीय है।"
-            3. IF Arms Act (आर्म्स एक्ट) -> "अभियुक्त के पास से अवैध शस्त्र बरामद हुआ। अपराध धारा [Sections] के अंतर्गत दण्डनीय है।"
-            
             OVERRIDES: PO:{man_po} Abhiyojak:{man_abhiyojak} Date:{man_date} Thana:{man_thana} Crime:{man_apr} Case:{man_vaad} Dhara:{man_dhara} Vaadi:{man_vaadi} Vivechak:{man_vivechak} NirnayDate:{man_nirnay} Accused:{man_abhiyukt} Ghatna:{man_ghatna} Adesh:{man_adesh}. Output ONLY JSON.
             """
             audio_part = types.Part.from_bytes(data=audio_file.getvalue(), mime_type=audio_file.type) if audio_file else None
@@ -305,10 +376,7 @@ elif doc_type == "Soochna (सूचना - Jamanat / NBW Recall)":
     if (uploaded_files_soochna or audio_file_soochna or s_court or s_accused) and st.button("Generate Soochna Document", type="primary"):
         with st.spinner("Processing..."):
             doc = Document()
-            prompt = f"""
-            Extract details for 'Soochna' into JSON with EXACTLY these keys: "court_name", "accused", "crime_no", "dhara", "thana", "date".
-            OVERRIDES (Use exactly if provided): Court:{s_court}, Accused:{s_accused}, CrimeNo:{s_crime}, Dhara:{s_dhara}, Thana:{s_thana}, Date:{s_date}. Output ONLY JSON.
-            """
+            prompt = f"Extract details for 'Soochna' into JSON: court_name, accused, crime_no, dhara, thana, date. Overrides: Court:{s_court}, Accused:{s_accused}, CrimeNo:{s_crime}, Dhara:{s_dhara}, Thana:{s_thana}, Date:{s_date}. Output ONLY JSON."
             audio_part = types.Part.from_bytes(data=audio_file_soochna.getvalue(), mime_type=audio_file_soochna.type) if audio_file_soochna else None
             contents = []
             if uploaded_files_soochna: contents.extend([PIL.Image.open(f) for f in uploaded_files_soochna])
@@ -324,50 +392,104 @@ elif doc_type == "Soochna (सूचना - Jamanat / NBW Recall)":
                 st.download_button("⬇️ Download Soochna.docx", data=bio.getvalue(), file_name="Soochna_Notice.docx")
             except Exception as e: st.error(f"Error: {e}")
 
-# ----------------- UI: WITNESS/SUMMONS REPORT -----------------
+# ----------------- UI: WITNESS REPORT -----------------
 elif doc_type == "Witness/Summons Report (साक्षी/समन विवरण)":
     audio_file_wit = st.audio_input("🎙️ Record Dictation")
     uploaded_files_wit = st.file_uploader("Upload Table Photo (Optional)", type=["jpg", "jpeg", "png"])
     
-    with st.expander("📝 Manual Number Entry (Fill the Table)"):
-        st.markdown("**Header Details**")
-        w_court = st.text_input("न्यायालय (Court Name):", placeholder="e.g., JM (JD) OUTLINE COURT कादीपुर सुल्तानपुर")
-        w_date = st.text_input("दिनांक (Date):", placeholder="e.g., 25/07/2026")
-        
-        st.markdown("**Table Data (Numbers)**")
+    with st.expander("📝 Manual Number Entry"):
+        w_court = st.text_input("न्यायालय (Court Name):", value="JM (JD) OUTLINE COURT कादीपुर सुल्तानपुर")
+        w_date = st.text_input("दिनांक (Date):", value="25/07/2026")
         w_col1, w_col2, w_col3, w_col4 = st.columns(4)
-        w_janpad = w_col1.text_input("जनपद (District):", value="सुल्तानपुर")
-        w_1 = w_col2.text_input("साक्ष्य हेतु नियत वाद:", placeholder="00")
-        w_2 = w_col3.text_input("निर्गत कुल सम्मन:", placeholder="00")
-        w_3 = w_col4.text_input("तामीला होकर प्राप्त सम्मन:", placeholder="00")
-        
+        w_janpad = w_col1.text_input("जनपद:", value="सुल्तानपुर")
+        w_1 = w_col2.text_input("साक्ष्य हेतु नियत वाद:", value="9")
+        w_2 = w_col3.text_input("निर्गत कुल सम्मन:", value="9")
+        w_3 = w_col4.text_input("तामीला होकर प्राप्त सम्मन:", value="8")
         w_col5, w_col6, w_col7, w_col8 = st.columns(4)
-        w_4 = w_col5.text_input("निर्गत कुल वारंट:", placeholder="00")
-        w_5 = w_col6.text_input("तामीला होकर प्राप्त वारंट:", placeholder="00")
-        w_6 = w_col7.text_input("उपस्थित साक्षियों की संख्या:", placeholder="00")
-        w_7 = w_col8.text_input("परीक्षित साक्षियों की संख्या:", placeholder="00")
-        
-        st.markdown("**Footer Details**")
-        w_vc = st.text_input("VC से होने वाली गवाही सूचना (VC Count):", placeholder="0")
+        w_4 = w_col5.text_input("निर्गत कुल वारंट:", value="00")
+        w_5 = w_col6.text_input("तामीला होकर प्राप्त वारंट:", value="00")
+        w_6 = w_col7.text_input("उपस्थित साक्षियों की संख्या:", value="06")
+        w_7 = w_col8.text_input("परीक्षित साक्षियों की संख्या:", value="06")
+        w_vc = st.text_input("VC Count:", value="0")
 
-    if (uploaded_files_wit or audio_file_wit or w_date or w_1) and st.button("Generate Witness Report", type="primary"):
-        with st.spinner("Processing..."):
-            doc = Document() 
-            prompt = f"""
-            Extract details into JSON with EXACTLY these keys: "court_name", "report_date", "janpad", "niyat_vaad", "nirgat_samman", "tamila_samman", "nirgat_warrant", "tamila_warrant", "upasthit_sakshi", "parikshit_sakshi", "vc_count".
-            OVERRIDES (Use exactly if provided): Court:{w_court}, Date:{w_date}, Janpad:{w_janpad}, NiyatVaad:{w_1}, NirgatSamman:{w_2}, TamilaSamman:{w_3}, NirgatWarrant:{w_4}, TamilaWarrant:{w_5}, Upasthit:{w_6}, Parikshit:{w_7}, VC:{w_vc}. Output ONLY JSON.
-            """
-            audio_part = types.Part.from_bytes(data=audio_file_wit.getvalue(), mime_type=audio_file_wit.type) if audio_file_wit else None
-            contents = []
-            if uploaded_files_wit: contents.append(PIL.Image.open(uploaded_files_wit))
-            if audio_part: contents.append(audio_part)
-            contents.append(prompt)
+    if st.button("Generate Witness Report", type="primary"):
+        doc = Document()
+        data = {"court_name": w_court, "report_date": w_date, "janpad": w_janpad, "niyat_vaad": w_1, "nirgat_samman": w_2, "tamila_samman": w_3, "nirgat_warrant": w_4, "tamila_warrant": w_5, "upasthit_sakshi": w_6, "parikshit_sakshi": w_7, "vc_count": w_vc}
+        add_witness_report_to_word(doc, data, global_mohrir)
+        bio = io.BytesIO()
+        doc.save(bio)
+        st.success("✅ Generated!")
+        st.download_button("⬇️ Download Witness Report.docx", data=bio.getvalue(), file_name="Witness_Report.docx")
+
+# ----------------- UI: TOP 10 REPORT (NEW) -----------------
+elif doc_type == "Top 10 Report (टॉप 10 की सूचना)":
+    st.info("📋 This generates the Top 10 Report table with default sample data. You can edit any field below or dictate updates.")
+    audio_top10 = st.audio_input("🎙️ Record Dictation to update dates/statuses")
+    
+    # Default sample rows based on image_13.png
+    default_top10 = [
+        ["पंकज सिंह S/O राजेंद्र प्रताप सिंह", "464/16", "385 IPC", "कादीपुर Str", "3229/24", "4", "01", "03", "साक्ष्य में", "11-08-26"],
+        ["-", "435/22", "3/25 A.act", "कादीपुर Str", "868/24", "6", "0", "6", "हाजिरी में", "11-08-26"],
+        ["-", "109/15", "174A IPC", "कादीपुर Str", "4584/24", "11", "0", "11", "साक्ष्य में", "11-08-26"],
+        ["-", "91/15", "386, 435, 427 IPC", "कादीपुर Str", "5451/24", "7", "0", "7", "साक्ष्य में", "11-08-26"]
+    ]
+    
+    with st.expander("✏️ Edit Top 10 Table Rows"):
+        edited_text = st.text_area("Edit row data (JSON format):", value=json.dumps(default_top10, ensure_ascii=False, indent=2), height=200)
+        
+    if st.button("Generate Top 10 Report", type="primary"):
+        with st.spinner("Generating document..."):
+            doc = Document()
+            rows = json.loads(edited_text)
             
-            try:
-                res = client.models.generate_content(model="gemini-3.6-flash", contents=contents).text.strip()
-                add_witness_report_to_word(doc, json.loads(res.replace("```json","").replace("```","").strip()), global_mohrir)
-                bio = io.BytesIO()
-                doc.save(bio)
-                st.success("✅ Witness Report generated in Landscape Mode!")
-                st.download_button("⬇️ Download Witness Report.docx", data=bio.getvalue(), file_name="Witness_Report.docx")
-            except Exception as e: st.error(f"Error: {e}")
+            # Optional audio processing override if spoken
+            if audio_top10:
+                prompt = f"Given these current Top 10 table rows: {json.dumps(rows)}, update any dates, witness counts, or statuses based on this audio dictation. Return ONLY updated JSON list of lists."
+                audio_part = types.Part.from_bytes(data=audio_top10.getvalue(), mime_type=audio_top10.type)
+                res = client.models.generate_content(model="gemini-3.6-flash", contents=[audio_part, prompt]).text.strip()
+                if "```json" in res: res = res.split("```json")[1].split("```")[0].strip()
+                elif "```" in res: res = res.split("```")[1].split("```")[0].strip()
+                rows = json.loads(res)
+                
+            add_top_10_report_to_word(doc, rows)
+            bio = io.BytesIO()
+            doc.save(bio)
+            st.success("✅ Top 10 Report generated successfully in Landscape Mode!")
+            st.download_button("⬇️ Download Top 10 Report.docx", data=bio.getvalue(), file_name="Top_10_Report.docx")
+
+# ----------------- UI: ADVOCATE CASES REPORT (NEW) -----------------
+elif doc_type == "Cases Against Advocates Report (अधिवक्ता के विरुद्ध अभियोग)":
+    st.info("⚖️ This generates the Cases Against Advocates table with default sample data. You can edit dates or statuses below.")
+    audio_adv = st.audio_input("🎙️ Record Dictation to update dates/statuses")
+    
+    # Default sample rows based on image_14.png
+    default_adv = [
+        ["35", "0415/16", "323/504/506 भादवि", "सुल्तानपुर", "कादीपुर", "झीगर पुत्र अनिकेत", "ACJM, कादीपुर", "हाजिरी", "18-08-26", "समन जारी है"],
+        ["37", "474/2021", "323/504/506/427 भादवि", "सुल्तानपुर", "कादीपुर", "हरिराम पुत्र छंगूराम", "ACJM, कादीपुर", "हाजिरी", "21-09-26", "समन जारी है"],
+        ["38", "423/11", "323/504/427 भादवि", "सुल्तानपुर", "कादीपुर", "दिवाकर सिंह पुत्र स्व० अनमोल सिंह", "ACJM, कादीपुर", "हाजिरी", "04-09-26", "समन जारी है"],
+        ["39", "423/2011", "323/504/506 भादवि", "सुल्तानपुर", "कादीपुर", "सुरेश नारायण यादव पुत्र हरिंस यादव", "ACJM, कादीपुर", "हाजिरी", "04-09-26", "समन जारी है"],
+        ["-", "402/21", "323,504,506 IPC", "सुल्तानपुर", "कादीपुर", "नितेश पांडेय s/o जय शंकर pandey", "ACJM KADIPUR", "हाजिरी", "22-09-26", "अभियुक्त को NBW"],
+        ["-", "140/17", "323,506IPC", "सुल्तानपुर", "कादीपुर", "जिगर डूबे व अन्य", "ACJM KADIPUR", "हाजिरी", "16-08-26", "अभियुक्त को NBW"]
+    ]
+    
+    with st.expander("✏️ Edit Advocate Cases Table Rows"):
+        edited_adv_text = st.text_area("Edit row data (JSON format):", value=json.dumps(default_adv, ensure_ascii=False, indent=2), height=220)
+        
+    if st.button("Generate Advocate Cases Report", type="primary"):
+        with st.spinner("Generating document..."):
+            doc = Document()
+            rows = json.loads(edited_adv_text)
+            
+            if audio_adv:
+                prompt = f"Given these current Advocate cases rows: {json.dumps(rows)}, update any dates, actions, or statuses based on this audio dictation. Return ONLY updated JSON list of lists."
+                audio_part = types.Part.from_bytes(data=audio_adv.getvalue(), mime_type=audio_adv.type)
+                res = client.models.generate_content(model="gemini-3.6-flash", contents=[audio_part, prompt]).text.strip()
+                if "```json" in res: res = res.split("```json")[1].split("```")[0].strip()
+                elif "```" in res: res = res.split("```")[1].split("```")[0].strip()
+                rows = json.loads(res)
+                
+            add_advocate_cases_report_to_word(doc, rows)
+            bio = io.BytesIO()
+            doc.save(bio)
+            st.success("✅ Advocate Cases Report generated successfully in Landscape Mode!")
+            st.download_button("⬇️ Download Advocate Cases Report.docx", data=bio.getvalue(), file_name="Advocate_Cases_Report.docx")
