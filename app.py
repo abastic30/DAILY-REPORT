@@ -283,6 +283,106 @@ def add_advocate_cases_report_to_word(doc, rows_data):
 
     doc.add_page_break()
 
+# ==========================================
+# FUNCTION 6: REMAND SHEET FORMAT (NEW)
+# ==========================================
+def add_remand_sheet_to_word(doc, data):
+    section = doc.sections[-1]
+    section.orientation = WD_ORIENT.PORTRAIT
+    section.page_width, section.page_height = Inches(8.5), Inches(11.0)
+    section.top_margin = section.bottom_margin = section.left_margin = section.right_margin = Inches(1.0)
+
+    court_name = str(data.get("court_name", "अपर मुख्य न्यायिक मजिस्ट्रेट-SD कादीपुर सुलतानपुर"))
+    
+    p_head = doc.add_paragraph()
+    p_head.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_head.add_run("रिमाण्ड शीट\n").bold = True
+    p_head.runs[0].font.size = Pt(16)
+    p_head.add_run(f"न्यायालय {court_name}").bold = True
+    p_head.runs[1].font.size = Pt(13)
+    doc.add_paragraph("")
+
+    crime_no = str(data.get("crime_no", ".................."))
+    dhara = str(data.get("dhara", ".................."))
+    thana = str(data.get("thana", ".................."))
+    janpad = str(data.get("janpad", "सुल्तानपुर"))
+    
+    p_details = doc.add_paragraph()
+    p_details.add_run(f"मु०अ०सं०- {crime_no}\nधारा- {dhara}\nथाना- {thana}\nजनपद- {janpad}\n\nराज्य बनाम\n\n1\n\n")
+    
+    arrest_date = str(data.get("arrest_date", ".................."))
+    accused_name = str(data.get("accused_name", "उपरोक्त अभियुक्त"))
+    
+    p_body = doc.add_paragraph()
+    p_body.add_run(f"आज दिनांक-{arrest_date} को उक्त अभियोग में उपरोक्त अभियुक्त ({accused_name}) को न्यायालय के समक्ष पुलिस द्वारा गिरफ्तार कर प्रस्तुत किया गया, जिसकी न्यायिक अभिरक्षा में रिमाण्ड किये जाने हेतु विवेचना अधिकारी द्वारा प्रार्थना की गयी। मैंने प्रथम सूचना रिपोर्ट व केस डायरी का अवलोकन किया जिसके अवलोकन से मेरा मत है कि अभियुक्त उपरोक्त को धारा-187 BNSS (भारतीय नागरिक सुरक्षा संहिता) के अंतर्गत न्यायिक अभिरक्षा में रिमाण्ड किये जाने का आधार पर्याप्त है।\n\n")
+    
+    p_adesh_head = doc.add_paragraph()
+    p_adesh_head.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_adesh_head.add_run("आदेश").bold = True
+    p_adesh_head.runs[0].font.size = Pt(14)
+    
+    remand_from = str(data.get("remand_from", ".................."))
+    remand_to = str(data.get("remand_to", ".................."))
+    jail_date = str(data.get("jail_date", ".................."))
+    
+    p_adesh_body = doc.add_paragraph()
+    p_adesh_body.add_run(f"अभियुक्त उपरोक्त का दिनांक-{remand_from} से दिनांक-{remand_to} तक न्यायिक अभिरक्षा में रिमाण्ड स्वीकृत किया जाता है। अभियुक्त को जिला कारागार से तलब कर दिनांक-{jail_date} को मेरे समक्ष प्रस्तुत किया जाए।\n\n\n")
+    
+    po_name = str(data.get("po_name", "अपर मुख्य न्यायिक मजिस्ट्रेट-SD\nकादीपुर, सुलतानपुर।"))
+    date_sign = str(data.get("date_sign", ".................."))
+    
+    p_foot = doc.add_paragraph()
+    p_foot.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    p_foot.add_run(f"{po_name}\nदिनांक-{date_sign}")
+    doc.add_page_break()
+
+# ==========================================
+# FUNCTION 7: COGNIZANCE / SANJAN ORDER FORMAT (NEW)
+# ==========================================
+def add_sanjan_order_to_word(doc, data):
+    section = doc.sections[-1]
+    section.orientation = WD_ORIENT.PORTRAIT
+    section.page_width, section.page_height = Inches(8.5), Inches(11.0)
+    section.top_margin = section.bottom_margin = section.left_margin = section.right_margin = Inches(1.0)
+
+    court_name = str(data.get("court_name", "अपर मुख्य न्यायिक मजिस्ट्रेट, कादीपुर, सुलतानपुर"))
+    
+    p_head = doc.add_paragraph()
+    p_head.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_head.add_run("न्यायालय\n").bold = True
+    p_head.runs[0].font.size = Pt(16)
+    p_head.add_run(f"{court_name}").bold = True
+    p_head.runs[1].font.size = Pt(14)
+    doc.add_paragraph("")
+
+    upasthit = str(data.get("upasthit", "सहायक अभियोजन अधिकारी / कोर्ट मोहर्रिर"))
+    vaad_no = str(data.get("vaad_no", "............."))
+    comp_no = str(data.get("comp_no", "............."))
+    cr_no = str(data.get("cr_no", "............."))
+    chargesheet_no = str(data.get("chargesheet_no", "............."))
+    crime_no = str(data.get("crime_no", "............."))
+    dhara = str(data.get("dhara", "............."))
+    thana = str(data.get("thana", "............."))
+    janpad = str(data.get("janpad", "सुल्तानपुर"))
+    order_date = str(data.get("order_date", "............."))
+    
+    p_meta = doc.add_paragraph()
+    p_meta.add_run(f"उपस्थित: {upasthit}\nवाद सं०- {vaad_no}\nकम्प्यूटर फाइलिंग सं०- {comp_no}\nसी०एन०आर०सं०- {cr_no}\nआरोप पत्र सं०- {chargesheet_no}\nमुकदमा अपराध संख्या- {crime_no}\nअन्तर्गत धारा- {dhara}\nथाना- {thana}\nजनपद- {janpad}\nदिनांक- {order_date}\n\n")
+    
+    accused_list = str(data.get("accused_list", "1...................................................."))
+    initial_dhara = str(data.get("initial_dhara", "...................................................."))
+    cognizance_dhara = str(data.get("cognizance_dhara", "...................................................."))
+    next_date = str(data.get("next_date", "...................................................."))
+    po_name = str(data.get("po_name", "(विश्वजीत सिंह)\nअपर मुख्य न्यायिक मजिस्ट्रेट,\nकादीपुर जनपद सुल्तानपुर।"))
+    
+    p_body = doc.add_paragraph()
+    p_body.add_run(f"आज पत्रावली संज्ञान के बिंदु पर सुनवाई हेतु प्रस्तुत हुई। संज्ञान के बिंदु पर पत्रावली/अभिलेक्स का अवलोकन किया गया।\nअवलोकन से विदित होता है कि थाना {thana}, जनपद {janpad} के उक्त प्रकरण में विवेचक द्वारा अभियुक्त / अभियुक्तगण—\n{accused_list}\n\nके विरुद्ध धारा {initial_dhara} के अन्तर्गत आरोप पत्र न्यायालय में प्रस्तुत किया गया है। केस डायरी एवं संलग्न प्रपत्रों का अवलोकन किया गया। पत्रावली पर उपलब्ध साक्षियों तथा गवाहों के कथनों के आधार पर उपरोक्त अभियुक्तगण के विरुद्ध प्रथमदृष्ट्या धारा {cognizance_dhara} के अन्तर्गत संज्ञेय अपराध कारित होना प्रतीत होता है।\nअतः, उपरोक्त अभियुक्त/अभियुक्तगण—\n{accused_list}\n\nके विरुद्ध धारा {cognizance_dhara} के अन्तर्गत अपराध का संज्ञान लिया जाता है।\nपत्रावली नियमित वाद के रूप में पंजीकृत की जाए तथा अभियुक्तगण को समन/वारंट (या कारागार से) तलब किया जाए।\nवास्ते उपस्थिति दिनांक— {next_date} नियत की जाती है।\n\n\n\n")
+    
+    p_foot = doc.add_paragraph()
+    p_foot.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    p_foot.add_run(po_name)
+    doc.add_page_break()
+
 
 # ==========================================
 # MAIN APP UI
@@ -296,7 +396,9 @@ doc_type = st.selectbox("📑 Select Document Type to Generate:", [
     "Soochna (सूचना - Jamanat / NBW Recall)",
     "Witness/Summons Report (साक्षी/समन विवरण)",
     "Top 10 Report (टॉप 10 की सूचना)",                      
-    "Cases Against Advocates Report (अधिवक्ता के विरुद्ध अभियोग)" 
+    "Cases Against Advocates Report (अधिवक्ता के विरुद्ध अभियोग)",
+    "Remand Sheet (रिमाण्ड शीट)",                     # NEW
+    "Cognizance / Sanjan Order (संज्ञान आदेश)"        # NEW
 ])
 st.markdown("---")
 
@@ -421,19 +523,16 @@ elif doc_type == "Witness/Summons Report (साक्षी/समन विव
         st.success("✅ Generated!")
         st.download_button("⬇️ Download Witness Report.docx", data=bio.getvalue(), file_name="Witness_Report.docx")
 
-# ----------------- UI: TOP 10 REPORT (WITH VOICE & MANUAL EDIT) -----------------
+# ----------------- UI: TOP 10 REPORT -----------------
 elif doc_type == "Top 10 Report (टॉप 10 की सूचना)":
-    st.info("📋 Edit the JSON table rows below or use the microphone to dictate updates (e.g., 'Change date for case 3229/24 to 20-08-26 and status to बहस में').")
-    
+    st.info("📋 Edit the JSON table rows below or use the microphone to dictate updates.")
     audio_top10 = st.audio_input("🎙️ Record Dictation for Top 10 Report")
-    
     default_top10 = [
         ["पंकज सिंह S/O राजेंद्र प्रताप सिंह", "464/16", "385 IPC", "कादीपुर Str", "3229/24", "4", "01", "03", "साक्ष्य में", "11-08-26"],
         ["-", "435/22", "3/25 A.act", "कादीपुर Str", "868/24", "6", "0", "6", "हाजिरी में", "11-08-26"],
         ["-", "109/15", "174A IPC", "कादीपुर Str", "4584/24", "11", "0", "11", "साक्ष्य में", "11-08-26"],
         ["-", "91/15", "386, 435, 427 IPC", "कादीपुर Str", "5451/24", "7", "0", "7", "साक्ष्य में", "11-08-26"]
     ]
-    
     with st.expander("✏️ Manual Data Entry & Dictation (Edit Table Rows)", expanded=True):
         edited_text = st.text_area("Edit table rows (JSON format):", value=json.dumps(default_top10, ensure_ascii=False, indent=2), height=250)
         
@@ -441,7 +540,6 @@ elif doc_type == "Top 10 Report (टॉप 10 की सूचना)":
         with st.spinner("Generating document..."):
             doc = Document()
             rows = json.loads(edited_text)
-            
             if audio_top10:
                 prompt = f"Given these current Top 10 table rows: {json.dumps(rows)}, update any dates, witness counts, or statuses based on this audio dictation. Return ONLY updated JSON list of lists."
                 audio_part = types.Part.from_bytes(data=audio_top10.getvalue(), mime_type=audio_top10.type)
@@ -449,19 +547,16 @@ elif doc_type == "Top 10 Report (टॉप 10 की सूचना)":
                 if "```json" in res: res = res.split("```json")[1].split("```")[0].strip()
                 elif "```" in res: res = res.split("```")[1].split("```")[0].strip()
                 rows = json.loads(res)
-                
             add_top_10_report_to_word(doc, rows)
             bio = io.BytesIO()
             doc.save(bio)
             st.success("✅ Top 10 Report generated successfully in Landscape Mode!")
             st.download_button("⬇️ Download Top 10 Report.docx", data=bio.getvalue(), file_name="Top_10_Report.docx")
 
-# ----------------- UI: ADVOCATE CASES REPORT (WITH VOICE & MANUAL EDIT) -----------------
+# ----------------- UI: ADVOCATE CASES REPORT -----------------
 elif doc_type == "Cases Against Advocates Report (अधिवक्ता के विरुद्ध अभियोग)":
-    st.info("⚖️ Edit the JSON table rows below or use the microphone to dictate status updates (e.g., 'Change next date for case 0415/16 to 25-08-26 and action to समन तामीला').")
-    
+    st.info("⚖️ Edit the JSON table rows below or use the microphone to dictate status updates.")
     audio_adv = st.audio_input("🎙️ Record Dictation for Advocate Cases Report")
-    
     default_adv = [
         ["35", "0415/16", "323/504/506 भादवि", "सुल्तानपुर", "कादीपुर", "झीगर पुत्र अनिकेत", "ACJM, कादीपुर", "हाजिरी", "18-08-26", "समन जारी है"],
         ["37", "474/2021", "323/504/506/427 भादवि", "सुल्तानपुर", "कादीपुर", "हरिराम पुत्र छंगूराम", "ACJM, कादीपुर", "हाजिरी", "21-09-26", "समन जारी है"],
@@ -470,7 +565,6 @@ elif doc_type == "Cases Against Advocates Report (अधिवक्ता क�
         ["-", "402/21", "323,504,506 IPC", "सुल्तानपुर", "कादीपुर", "नितेश पांडेय s/o जय शंकर pandey", "ACJM KADIPUR", "हाजिरी", "22-09-26", "अभियुक्त को NBW"],
         ["-", "140/17", "323,506IPC", "सुल्तानपुर", "कादीपुर", "जिगर डूबे व अन्य", "ACJM KADIPUR", "हाजिरी", "16-08-26", "अभियुक्त को NBW"]
     ]
-    
     with st.expander("✏️ Manual Data Entry & Dictation (Edit Table Rows)", expanded=True):
         edited_adv_text = st.text_area("Edit table rows (JSON format):", value=json.dumps(default_adv, ensure_ascii=False, indent=2), height=280)
         
@@ -478,7 +572,6 @@ elif doc_type == "Cases Against Advocates Report (अधिवक्ता क�
         with st.spinner("Generating document..."):
             doc = Document()
             rows = json.loads(edited_adv_text)
-            
             if audio_adv:
                 prompt = f"Given these current Advocate cases rows: {json.dumps(rows)}, update any dates, actions, or statuses based on this audio dictation. Return ONLY updated JSON list of lists."
                 audio_part = types.Part.from_bytes(data=audio_adv.getvalue(), mime_type=audio_adv.type)
@@ -486,9 +579,113 @@ elif doc_type == "Cases Against Advocates Report (अधिवक्ता क�
                 if "```json" in res: res = res.split("```json")[1].split("```")[0].strip()
                 elif "```" in res: res = res.split("```")[1].split("```")[0].strip()
                 rows = json.loads(res)
-                
             add_advocate_cases_report_to_word(doc, rows)
             bio = io.BytesIO()
             doc.save(bio)
             st.success("✅ Advocate Cases Report generated successfully in Landscape Mode!")
             st.download_button("⬇️ Download Advocate Cases Report.docx", data=bio.getvalue(), file_name="Advocate_Cases_Report.docx")
+
+# ----------------- UI: REMAND SHEET (NEW) -----------------
+elif doc_type == "Remand Sheet (रिमाण्ड शीट)":
+    st.info("📄 Upload a police document/FIR or use voice dictation to auto-fill, or type manually below.")
+    audio_remand = st.audio_input("🎙️ Record Dictation for Remand Sheet")
+    uploaded_remand = st.file_uploader("Upload FIR / Case Photo", type=["jpg", "jpeg", "png"])
+    
+    with st.expander("📝 Manual Text Inputs & Overrides", expanded=True):
+        r_col1, r_col2 = st.columns(2)
+        r_court = r_col1.text_input("न्यायालय (Court Name):", value="अपर मुख्य न्यायिक मजिस्ट्रेट-SD कादीपुर सुलतानपुर")
+        r_crime = r_col1.text_input("मु०अ०सं० (Crime No):")
+        r_dhara = r_col1.text_input("धारा (Sections):")
+        r_thana = r_col2.text_input("थाना (Thana):")
+        r_janpad = r_col2.text_input("जनपद (District):", value="सुल्तानपुर")
+        r_arrest = r_col2.text_input("गिरफ्तारी दिनांक (Arrest Date):")
+        
+        r_accused = st.text_input("अभियुक्त का नाम (Accused Name):")
+        r_c1, r_c2, r_c3 = st.columns(3)
+        r_from = r_c1.text_input("रिमाण्ड प्रारम्भ दिनांक (Remand From):")
+        r_to = r_c2.text_input("रिमाण्ड समाप्ति दिनांक (Remand To):")
+        r_jail = r_c3.text_input("जिला कारागार से तलब दिनांक (Jail Date):")
+        
+        r_po = st.text_input("पी.ओ. / न्यायाधीश हस्ताक्षर नाम (Judge Signature Box):", value="अपर मुख्य न्यायिक मजिस्ट्रेट-SD\nकादीपुर, सुलतानपुर।")
+        r_date = st.text_input("दिनांक (Sign Date):")
+
+    if (uploaded_remand or audio_remand or r_crime) and st.button("Generate Remand Sheet", type="primary"):
+        with st.spinner("Processing Remand Sheet..."):
+            doc = Document()
+            prompt = f"""
+            Extract details for a legal 'Remand Sheet' into JSON with EXACTLY these keys: "court_name", "crime_no", "dhara", "thana", "janpad", "arrest_date", "accused_name", "remand_from", "remand_to", "jail_date", "po_name", "date_sign".
+            OVERRIDES (Use exactly if provided): Court:{r_court}, Crime:{r_crime}, Dhara:{r_dhara}, Thana:{r_thana}, Janpad:{r_janpad}, ArrestDate:{r_arrest}, Accused:{r_accused}, From:{r_from}, To:{r_to}, JailDate:{r_jail}, PO:{r_po}, Date:{r_date}. Output ONLY JSON.
+            """
+            audio_part = types.Part.from_bytes(data=audio_remand.getvalue(), mime_type=audio_remand.type) if audio_remand else None
+            contents = []
+            if uploaded_remand: contents.append(PIL.Image.open(uploaded_remand))
+            if audio_part: contents.append(audio_part)
+            contents.append(prompt)
+            
+            try:
+                res = client.models.generate_content(model="gemini-3.6-flash", contents=contents).text.strip()
+                if "```json" in res: res = res.split("```json")[1].split("```")[0].strip()
+                elif "```" in res: res = res.split("```")[1].split("```")[0].strip()
+                data = json.loads(res)
+                
+                add_remand_sheet_to_word(doc, data)
+                bio = io.BytesIO()
+                doc.save(bio)
+                st.success("✅ Remand Sheet generated successfully!")
+                st.download_button("⬇️ Download Remand_Sheet.docx", data=bio.getvalue(), file_name="Remand_Sheet.docx")
+            except Exception as e: st.error(f"Error: {e}")
+
+# ----------------- UI: COGNIZANCE / SANJAN ORDER (NEW) -----------------
+elif doc_type == "Cognizance / Sanjan Order (संज्ञान आदेश)":
+    st.info("⚖️ Upload a chargesheet photo or dictate details to generate the Sanjan Order.")
+    audio_sanjan = st.audio_input("🎙️ Record Dictation for Sanjan Order")
+    uploaded_sanjan = st.file_uploader("Upload Chargesheet Photo", type=["jpg", "jpeg", "png"])
+    
+    with st.expander("📝 Manual Text Inputs & Overrides", expanded=True):
+        sn_col1, sn_col2 = st.columns(2)
+        sn_court = sn_col1.text_input("न्यायालय (Court Name):", value="अपर मुख्य न्यायिक मजिस्ट्रेट, कादीपुर, सुलतानपुर")
+        sn_upasthit = sn_col1.text_input("उपस्थित (Present):", value="सहायक अभियोजन अधिकारी / कोर्ट मोहर्रिर")
+        sn_vaad = sn_col1.text_input("वाद सं० (Vaad No):")
+        sn_comp = sn_col2.text_input("कम्प्यूटर फाइलिंग सं० (Computer Filing No):")
+        sn_cr = sn_col2.text_input("सी०एन०आर०सं० (CNR No):")
+        sn_cs = sn_col2.text_input("आरोप पत्र सं० (Chargesheet No):")
+        
+        sn_c1, sn_c2, sn_c3 = st.columns(3)
+        sn_crime = sn_c1.text_input("मुकदमा अपराध संख्या (Crime No):")
+        sn_dhara = sn_c2.text_input("अन्तर्गत धारा (Initial Sections):")
+        sn_cog_dhara = sn_c3.text_input("संज्ञान धारा (Cognizance Sections):")
+        
+        sn_d1, sn_d2 = st.columns(2)
+        sn_thana = sn_d1.text_input("थाना (Thana):")
+        sn_janpad = sn_d1.text_input("जनपद (District):", value="सुल्तानपुर")
+        sn_date = sn_d2.text_input("दिनांक (Order Date):")
+        sn_next = sn_d2.text_input("वास्ते उपस्थिति दिनांक (Next Date):")
+        
+        sn_accused = st.text_area("अभियुक्तगण का नाम (Accused List):", value="1....................................................")
+        sn_po = st.text_area("पी.ओ. / न्यायाधीश हस्ताक्षर बॉक्स (Judge Signature Box):", value="(विश्वजीत सिंह)\nअपर मुख्य न्यायिक मजिस्ट्रेट,\nकादीपुर जनपद सुल्तानपुर।")
+
+    if (uploaded_sanjan or audio_sanjan or sn_crime) and st.button("Generate Sanjan Order", type="primary"):
+        with st.spinner("Processing Sanjan Order..."):
+            doc = Document()
+            prompt = f"""
+            Extract details for a legal 'Cognizance/Sanjan Order' into JSON with EXACTLY these keys: "court_name", "upasthit", "vaad_no", "comp_no", "cr_no", "chargesheet_no", "crime_no", "dhara", "thana", "janpad", "order_date", "accused_list", "initial_dhara", "cognizance_dhara", "next_date", "po_name".
+            OVERRIDES (Use exactly if provided): Court:{sn_court}, Upasthit:{sn_upasthit}, VaadNo:{sn_vaad}, Comp:{sn_comp}, CR:{sn_cr}, CS:{sn_cs}, Crime:{sn_crime}, Dhara:{sn_dhara}, Thana:{sn_thana}, Janpad:{sn_janpad}, OrderDate:{sn_date}, Accused:{sn_accused}, InitialDhara:{sn_dhara}, CognizanceDhara:{sn_cog_dhara}, NextDate:{sn_next}, PO:{sn_po}. Output ONLY JSON.
+            """
+            audio_part = types.Part.from_bytes(data=audio_sanjan.getvalue(), mime_type=audio_sanjan.type) if audio_sanjan else None
+            contents = []
+            if uploaded_sanjan: contents.append(PIL.Image.open(uploaded_sanjan))
+            if audio_part: contents.append(audio_part)
+            contents.append(prompt)
+            
+            try:
+                res = client.models.generate_content(model="gemini-3.6-flash", contents=contents).text.strip()
+                if "```json" in res: res = res.split("```json")[1].split("```")[0].strip()
+                elif "```" in res: res = res.split("```")[1].split("```")[0].strip()
+                data = json.loads(res)
+                
+                add_sanjan_order_to_word(doc, data)
+                bio = io.BytesIO()
+                doc.save(bio)
+                st.success("✅ Sanjan Order generated successfully!")
+                st.download_button("⬇️ Download Sanjan_Order.docx", data=bio.getvalue(), file_name="Sanjan_Order.docx")
+            except Exception as e: st.error(f"Error: {e}")
